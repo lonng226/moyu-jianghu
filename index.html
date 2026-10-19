@@ -99,6 +99,48 @@ body{background:var(--bg);margin:0;font-family:"Cascadia Mono","Consolas","JetBr
 ::-webkit-scrollbar{width:9px;height:9px;}
 ::-webkit-scrollbar-thumb{background:#1d3325;border-radius:5px;}
 ::-webkit-scrollbar-track{background:transparent;}
+/* 战斗双栏（移动端单列化用 class 控制） */
+.battle-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:14px;}
+/* 浮动老板键按钮（触屏设备无反引号键，全端可用；伪装时变成 Excel 名称框样式） */
+#bossBtn{position:fixed;right:14px;bottom:14px;z-index:1100;border:1px solid var(--border2);background:rgba(11,16,12,.85);color:var(--dim);font-family:inherit;font-size:13px;padding:8px 14px;border-radius:6px;cursor:pointer;opacity:.55;transition:opacity .15s;}
+#bossBtn:hover{opacity:1;color:var(--green);border-color:var(--green);}
+#bossBtn.boss-on{border:1px solid #c8cdd4;background:#f4f6f8;color:#4a5568;opacity:.9;border-radius:2px;font-family:"Cascadia Mono","Consolas",monospace;}
+/* 云端登录状态徽标 */
+.cloud-badge{display:inline-block;border:1px solid #2a4a35;border-radius:3px;padding:1px 8px;font-size:11px;color:var(--cyan);background:#0d130e;}
+/* ============ 移动端适配 ============ */
+@media (max-width:768px){
+  .sbody{padding:12px 12px;padding-bottom:70px;}
+  .two-col,.two-col.even,.two-col.wide{grid-template-columns:1fr;}
+  .battle-grid{grid-template-columns:1fr;gap:12px;}
+  .menu-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .menu-item{padding:10px 10px;gap:10px;}
+  .menu-item .no{width:22px;font-size:16px;}
+  .menu-item .mt{font-size:14px;}
+  .menu-item .ms{font-size:11px;}
+  .stat-strip{gap:8px 14px;font-size:13px;padding:8px 12px;}
+  .tt{font-size:13px;}
+  .tt th,.tt td{padding:6px 6px;}
+  .tt th{letter-spacing:0;}
+  .btn{padding:10px 16px;font-size:15px;min-height:44px;}
+  .field{flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .field label{width:100%;text-align:left;}
+  .field input{max-width:100%;font-size:16px;} /* 16px 防 iOS 聚焦缩放 */
+  .hang-bar{gap:8px 14px;font-size:13px;padding:9px 12px;}
+  .cmdline{font-size:12px;gap:8px;}
+  .tabs{flex-wrap:wrap;gap:6px;}
+  .tab{padding:8px 14px;font-size:14px;min-height:40px;}
+  .attr-row .ah{display:none;}
+  .attr-row{gap:10px;}
+  .log{font-size:13.5px;line-height:1.8;padding:10px 12px;}
+  .panel{padding:12px 12px;}
+  .ptitle{font-size:12px;letter-spacing:1px;}
+  #bossBtn{right:10px;bottom:10px;padding:12px 18px;font-size:15px;opacity:.75;}
+}
+@media (hover:none){
+  .btn:hover{background:transparent;color:var(--green);}
+  .btn.solid:hover{background:var(--green);color:#06130a;}
+  .menu-item:active{border-color:var(--green);background:var(--panel2);}
+}
 </style>
 </head>
 <body>
@@ -110,6 +152,9 @@ body{background:var(--bg);margin:0;font-family:"Cascadia Mono","Consolas","JetBr
   </div>
   <div class="sbody" id="sbody"></div>
 </div>
+
+<!-- 浮动老板键：桌面与触屏均可一键伪装 -->
+<button id="bossBtn" onclick="toggleBoss()" title="老板键（Esc 返回）">$ _</button>
 
 <!-- 老板键伪装层：任意界面按 ` 进入 -->
 <div id="bossOverlay">
@@ -133,6 +178,7 @@ body{background:var(--bg);margin:0;font-family:"Cascadia Mono","Consolas","JetBr
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"></script>
 <script>
 "use strict";
 /* ============ 工具 ============ */
@@ -297,6 +343,314 @@ var NEWS_TPL = [
 var EQUIP_KIND_NAME = { weapon:"武器", armor:"防具", shoes:"鞋子" };
 var ATTR_KEY = { tl:"膂力", sf:"身法", wx:"悟性", gg:"根骨" };
 
+/* ============ 云端联机层（workbuddy cloud-service） ============ */
+/* 离线或 SDK 加载失败时自动降级为纯本地单机模式，游戏不受影响 */
+var CLOUD_CONFIG = {
+  endpoint: "https://moyu-jianghu.app.workbuddy.host",
+  oauthRelayBaseUrl: "https://www.workbuddy.cn/v2/as/genie-baas/oauth",
+  publishableKey: "wbpk_TK5oy4By03Tqrg7YzNaQ4s_bH0u1QUcgqiviWjhyqhljQMvPUPb3NIf"
+};
+var CLOUD = {
+  sdk: null, on: false,
+  uid: null, session: null,
+  saveTimer: 0,          // 云存档防抖
+  lastMsgId: 0,          // 聊天增量游标
+  seenMsgIds: {},        // 云消息去重
+  seenSoldIds: {},       // 已入账的集市成交
+  seenDuels: {},         // 已播报的切磋战报
+  pendingOtp: null,      // 邮箱 OTP challenge
+  onlinePlayers: [],     // 在线真人缓存（players 表）
+  stallCache: [],        // 真人集市摊位缓存
+  rankCache: null,       // 真人排行榜缓存
+  sec: 0, min: 0, stallSec: 0
+};
+
+function cloudInit(){
+  if(typeof WorkBuddyCloud === "undefined"){ return; } // SDK 未加载（离线）→ 纯本地
+  try{
+    CLOUD.sdk = WorkBuddyCloud.createWorkBuddyCloud({
+      endpoint: CLOUD_CONFIG.endpoint,
+      oauthRelayBaseUrl: CLOUD_CONFIG.oauthRelayBaseUrl,
+      publishableKey: CLOUD_CONFIG.publishableKey
+    });
+  }catch(e){ CLOUD.sdk = null; return; }
+  cloudRestoreAuth();
+}
+async function cloudRestoreAuth(){
+  try{
+    var url = new URL(location.href);
+    if(url.searchParams.has("code") || url.searchParams.has("error")){
+      var provider = url.searchParams.get("provider");
+      if(provider === "wechat" && typeof CLOUD.sdk.auth.handleWechatWebCallback === "function"){
+        var res = await CLOUD.sdk.auth.handleWechatWebCallback();
+        if(res && res.error){ toastHint("微信登录失败，请重试"); }
+      }
+      for(var i=0;i<["code","state","provider","error"].length;i++){ url.searchParams.delete(["code","state","provider","error"][i]); }
+      history.replaceState(null, "", url.pathname + url.search + url.hash);
+    }
+    var r2 = await CLOUD.sdk.auth.getSession();
+    if(r2 && r2.data){ await cloudAfterLogin(r2.data, true); }
+  }catch(e){ /* 云端异常保持本地模式 */ }
+}
+async function cloudAfterLogin(session, silent){
+  CLOUD.on = true;
+  CLOUD.session = session;
+  CLOUD.uid = session && session.user ? session.user.id : null;
+  if(!silent){
+    var who = (session.user && (session.user.name || session.user.email)) || "云端大侠";
+    toastHint("☁ 云端已连接：" + who);
+  }
+  await cloudLoadSave();
+  cloudHeartbeat();
+  cloudPollTick(true);
+  render();
+}
+/* ---- 云存档 ---- */
+function afterLoadFix(){
+  checkDaily();
+  if(S.idle){ settleIdle(true); S.idle = null; }
+  if(!S.hp) S.hp = maxHp();
+  if(!S.mp) S.mp = maxMp();
+  S.hp = Math.min(S.hp, maxHp()); S.mp = Math.min(S.mp, maxMp());
+  SCR = (S.screen && S.screen!=="login" && S.screen!=="create") ? S.screen : "hall";
+}
+async function cloudLoadSave(){
+  try{
+    var q = await CLOUD.sdk.database.from("saves").select("data, revision").eq("owner_id", CLOUD.uid).maybeSingle();
+    if(q.error) return;
+    if(q.data && q.data.data && q.data.data.name){
+      S = q.data.data;
+      afterLoadFix();
+      pushNews("[系统] ☁ 云端存档已同步（"+S.name+"）");
+      save();
+    } else if(S && S.name){
+      // 云端无档，本地有角色：上传绑定为云端存档
+      await cloudSaveNow();
+      pushNews("[系统] ☁ 本地角色已上传云端，此后跨设备同步");
+    } else {
+      // 都没有：去创建角色
+      SCR = "create"; regRoll = { attrs: rollAttrs(), reroll: 1 };
+    }
+  }catch(e){}
+}
+function cloudProfile(){
+  return { hp:maxHp(), atk:pAtk(), def:pDef(), dodge:pDodge(), hit:pHIt(), kf:kfTotal(), level:S.level, skills:knownSkillNames() };
+}
+async function cloudSaveNow(){
+  if(!CLOUD.on || !S || !CLOUD.uid) return;
+  try{
+    var q = await CLOUD.sdk.database.from("saves").select("id").eq("owner_id", CLOUD.uid).maybeSingle();
+    if(q.error) return;
+    if(q.data){ await CLOUD.sdk.database.from("saves").update({ data: S, revision: (S.cloudRev||0)+1 }).eq("owner_id", CLOUD.uid); }
+    else { var r = await CLOUD.sdk.database.from("saves").insert({ data: S }).select(); if(r.data&&r.data[0]) S.cloudRev = 1; }
+    S.cloudRev = (S.cloudRev||0)+1;
+    var prof = cloudProfile();
+    var q2 = await CLOUD.sdk.database.from("players").select("id").eq("owner_id", CLOUD.uid).maybeSingle();
+    var nowIso = new Date().toISOString();
+    if(q2.data){
+      await CLOUD.sdk.database.from("players").update({ name:S.name, sect:sectName(), level:S.level, kf_total:kfTotal(), silver:wealth(), fame:S.fame, profile:prof, last_active:nowIso, updated_at:nowIso }).eq("owner_id", CLOUD.uid);
+    } else {
+      await CLOUD.sdk.database.from("players").insert({ name:S.name, sect:sectName(), level:S.level, kf_total:kfTotal(), silver:wealth(), fame:S.fame, profile:prof });
+    }
+  }catch(e){}
+}
+async function cloudHeartbeat(){
+  if(!CLOUD.on || !CLOUD.uid) return;
+  try{ await CLOUD.sdk.database.from("players").update({ last_active: new Date().toISOString() }).eq("owner_id", CLOUD.uid); }catch(e){}
+}
+/* ---- 云端聊天 ---- */
+function cloudSendChat(channel, content){
+  if(!CLOUD.on || !S) return;
+  CLOUD.sdk.database.from("chat_messages").insert({ owner_name:S.name, channel:channel, sect:S.sect||null, content:content }).select()
+    .then(function(r){ if(r.data && r.data[0]){ CLOUD.seenMsgIds[r.data[0].id] = 1; if(r.data[0].id > CLOUD.lastMsgId) CLOUD.lastMsgId = r.data[0].id; } })
+    .catch(function(){});
+}
+function cloudSendNews(content){
+  if(!CLOUD.on || !S) return;
+  CLOUD.sdk.database.from("chat_messages").insert({ owner_name:"江湖快讯", channel:"news", content:content }).select()
+    .then(function(r){ if(r.data && r.data[0]) CLOUD.seenMsgIds[r.data[0].id] = 1; }).catch(function(){});
+}
+/* ---- 云端轮询：聊天 / 在线 / 集市成交 / 战报 ---- */
+async function cloudPollTick(initial){
+  if(!CLOUD.on || !S) return;
+  try{
+    var q = await CLOUD.sdk.database.from("chat_messages").select("id, owner_name, channel, sect, content").gt("id", CLOUD.lastMsgId).order("id", { ascending:true }).limit(50);
+    if(q.data && q.data.length){
+      for(var i=0;i<q.data.length;i++){
+        var m = q.data[i];
+        if(m.id > CLOUD.lastMsgId) CLOUD.lastMsgId = m.id;
+        if(CLOUD.seenMsgIds[m.id]) continue;
+        CLOUD.seenMsgIds[m.id] = 1;
+        if(m.channel==="world"){ pushWorld("[世界] "+m.owner_name+"："+m.content); if(SCR==="chat"||SCR==="hall") render(); }
+        else if(m.channel==="sect" && S.sect && m.sect===S.sect){ pushSect("[门派] "+m.owner_name+"："+m.content); if(SCR==="chat"&&S.ui.chatTab==="sect") render(); }
+        else if(m.channel==="news"){ pushNews(m.content); if(SCR==="hall") { /* lightRefresh */ } }
+      }
+    }
+  }catch(e){}
+  try{
+    var since = new Date(Date.now()-4*60000).toISOString();
+    var q2 = await CLOUD.sdk.database.from("players").select("name, sect, level, kf_total, fame, silver, profile").gte("last_active", since).limit(30);
+    var others = (q2.data||[]).filter(function(p){ return p.name !== S.name; });
+    CLOUD.onlinePlayers = others;
+    if(S) S.online = others.length + 1 + ri(120, 180); // 真人在线 + 江湖众生
+    if(SCR==="pvp" && !initial) render();
+  }catch(e){}
+  CLOUD.stallSec++;
+  if(CLOUD.stallSec >= 3 || initial){
+    CLOUD.stallSec = 0;
+    try{
+      var q3 = await CLOUD.sdk.database.from("market_listings").select("id, owner_name, item_name, kind, atk, def, agi, price, created_at").eq("status","listed").order("id",{ascending:false}).limit(12);
+      CLOUD.stallCache = (q3.data||[]).filter(function(l){ return l.owner_name !== S.name; });
+      if(SCR==="market" && S.ui.marketTab==="buy" && !initial) render();
+    }catch(e){}
+    try{
+      var q4 = await CLOUD.sdk.database.from("market_listings").select("id, item_name, price, buyer").eq("owner_id", CLOUD.uid).eq("status","sold").order("id",{ascending:false}).limit(20);
+      if(q4.data){
+        for(var j=q4.data.length-1;j>=0;j--){
+          var sold = q4.data[j];
+          if(CLOUD.seenSoldIds[sold.id]) continue;
+          CLOUD.seenSoldIds[sold.id] = 1;
+          var gain = Math.round(sold.price*0.95);
+          S.silver += gain;
+          pushNews("[快讯] ☁ 你的摊位「"+sold.item_name+"」被「"+(sold.buyer||"神秘人")+"」买走，入账 "+gain+" 文（含 5% 手续费）");
+        }
+        if(q4.data.length) save();
+      }
+    }catch(e){}
+  }
+  try{
+    var q5 = await CLOUD.sdk.database.from("duels").select("id, challenger, target, winner").order("id",{ascending:false}).limit(12);
+    if(q5.data){
+      for(var k=0;k<q5.data.length;k++){
+        var d = q5.data[k];
+        if(CLOUD.seenDuels[d.id]) continue;
+        CLOUD.seenDuels[d.id] = 1;
+        if(d.target === S.name && d.challenger !== S.name){
+          pushNews("[快讯] ☁ 「"+d.challenger+"」向你发起切磋，"+(d.winner===S.name?"你获胜了！声望已在战报中":"你不敌对方——对方留话：阁下好功夫"));
+          if(d.winner === S.name){ S.fame += 2; save(); }
+        } else if(d.challenger === S.name){ CLOUD.seenDuels[d.id] = 1; }
+      }
+    }
+  }catch(e){}
+}
+/* ---- 云端排行榜 ---- */
+async function cloudRankLoad(){
+  if(!CLOUD.on) return;
+  try{
+    var q = await CLOUD.sdk.database.from("players").select("name, sect, level, kf_total, silver, fame").order("kf_total",{ascending:false}).limit(60);
+    CLOUD.rankCache = q.data || [];
+    if(SCR==="rank") render();
+  }catch(e){}
+}
+/* ---- 云端登录 UI 动作 ---- */
+async function cloudSendCode(){
+  if(!CLOUD.sdk){ toastHint("云端组件未加载，请检查网络后刷新"); return; }
+  var email = el("cloudEmail").value.trim();
+  if(!/^\S+@\S+\.\S+$/.test(email)){ toastHint("请输入正确的邮箱地址"); return; }
+  var sent = await CLOUD.sdk.auth.sendOtp({ email: email });
+  if(sent.error){ toastHint("发送失败："+sent.error.message); return; }
+  CLOUD.pendingOtp = { email: email, verificationId: sent.data.verificationId, isExistingUser: sent.data.isExistingUser };
+  toastHint("验证码已发送至邮箱，请查收");
+}
+async function cloudVerifyCode(){
+  var email = el("cloudEmail").value.trim();
+  var code = el("cloudCode").value.trim();
+  var p = CLOUD.pendingOtp;
+  if(!p || p.email !== email){ toastHint("请先获取当前邮箱的验证码"); return; }
+  if(!code){ toastHint("请输入邮箱收到的验证码"); return; }
+  var done = await CLOUD.sdk.auth.verifyOtp({ email: p.email, verificationId: p.verificationId, isExistingUser: p.isExistingUser, token: code });
+  if(done.error){ toastHint("登录失败："+done.error.message); return; }
+  CLOUD.pendingOtp = null;
+  await cloudAfterLogin(done.data, false);
+}
+function cloudWechatLogin(){
+  if(!CLOUD.sdk){ toastHint("云端组件未加载，请检查网络后刷新"); return; }
+  CLOUD.sdk.auth.signInWithOAuth({ provider: "wechat", redirectTo: location.origin }).then(function(r){
+    if(r.error){ toastHint("微信登录暂不可用："+r.error.message); return; }
+    location.assign(r.data.url);
+  });
+}
+function cloudLogout(){
+  if(!CLOUD.sdk) return;
+  CLOUD.sdk.auth.signOut().then(function(){
+    CLOUD.on = false; CLOUD.session = null; CLOUD.uid = null;
+    toastHint("已退出云端，回到本地模式");
+    render();
+  });
+}
+/* ---- 真人切磋 ---- */
+function duelHuman(p){
+  var me = makePlayerUnit(); me.atk = pAtk() + kfTotal()*0.35;
+  var f = p.profile || {};
+  var foe = { name:p.name, hpMax:(f.hp||100), hp:(f.hp||100), atk:(f.atk||16)+(f.kf||10)*0.5, def:(f.def||5), dodge:(f.dodge||10)*0.9, hit:85 };
+  var log = [];
+  log.push({cls:"sys", txt:"» 你与「"+p.name+"」登上擂台，抱拳行礼。（云端真人切磋）"});
+  var turn = 1, guard = 0;
+  while(me.hp>0 && foe.hp>0 && guard<60){
+    guard++;
+    if(tryDodge(foe)) log.push({cls:"foe", txt:"» 第 "+turn+" 回合：「"+p.name+"」的身法让你无从下手。"});
+    else{
+      var r1 = calcDmg(me, foe, 1.25);
+      foe.hp -= r1.v;
+      log.push({cls:"you", txt:"» 第 "+turn+" 回合：你「"+(pick(knownSkillNames())||"基本拳脚")+"」抢先出手，造成 "+r1.v+" 点伤害。"});
+    }
+    if(foe.hp<=0) break;
+    if(tryDodge(me)) log.push({cls:"foe", txt:"» 第 "+turn+" 回合：「"+p.name+"」闪过你的攻势，回手一记，你堪堪挡下。"});
+    else{
+      var r2 = calcDmg(foe, me, 1);
+      me.hp -= r2.v;
+      log.push({cls:"foe", txt:"» 第 "+turn+" 回合：「"+p.name+"」一记「"+((f.skills&&f.skills.length)?pick(f.skills):"基本拳脚")+"」扫来，你气血 -"+r2.v+"。"});
+    }
+    turn++;
+  }
+  var win = foe.hp <= 0;
+  log.push({cls:"sys", txt: win ? "════ 切磋获胜 ════　声望 +2 · 战报已同步世界"
+                                : "════ 切磋落败 ════　「"+p.name+"」抱拳：阁下好功夫，来日再战"});
+  return { win:win, log:log, target:p };
+}
+async function doDuelHuman(name){
+  if(!CLOUD.on) return;
+  if(S.daily.duels >= 10){ toastHint("今日切磋次数已用完，明日再战"); return; }
+  var p = null;
+  for(var i=0;i<CLOUD.onlinePlayers.length;i++) if(CLOUD.onlinePlayers[i].name===name){ p = CLOUD.onlinePlayers[i]; break; }
+  if(!p){ toastHint("对方已离线"); return; }
+  S.daily.duels++;
+  var r = duelHuman(p);
+  S.pvpLast = { title:"云端切磋 · 对阵「"+name+"」", result:r.win?"胜":"负", log:r.log };
+  if(r.win){ S.fame += 2; gainExp(20 + Math.round((p.kf_total||10)/2)); pushWorld("[世界] 快讯：「"+S.name+"」在擂台击败「"+name+"」，升至声望 "+S.fame+"（"+fameTitle(S.fame)+"）"); }
+  else { gainExp(10); }
+  CLOUD.sdk.database.from("duels").insert({ challenger:S.name, target:name, winner:r.win?S.name:name, log:r.log }).catch(function(){});
+  cloudSendNews("[快讯] ☁ 「"+S.name+"」在擂台"+(r.win?"击败":"不敌")+"真人大侠「"+name+"」");
+  save(); render();
+}
+/* ---- 云端集市 ---- */
+function cloudListStall(e, price){
+  if(!CLOUD.on) return null;
+  CLOUD.sdk.database.from("market_listings").insert({ owner_name:S.name, item_name:e.name, kind:e.kind, atk:e.atk||null, def:e.def||null, agi:e.agi||null, price:price }).catch(function(){});
+}
+async function cloudBuyStall(listingId){
+  var idx = -1;
+  for(var i=0;i<CLOUD.stallCache.length;i++) if(CLOUD.stallCache[i].id===listingId) idx = i;
+  if(idx<0) return;
+  var l = CLOUD.stallCache[idx];
+  if(S.silver < l.price){ toastHint("银两不足"); return; }
+  var r = await CLOUD.sdk.database.from("market_listings").update({ status:"sold", buyer:S.name }).eq("id", listingId).eq("status","listed").select();
+  var affected = (r.data && r.data.length) ? r.data : [];
+  if(r.error || !affected.length){ toastHint("手慢了，这件已被别人买走"); cloudPollTick(true); return; }
+  S.silver -= l.price;
+  S.uidSeq++;
+  S.bag.push({ uid:S.uidSeq, name:l.item_name, kind:l.kind, atk:l.atk, def:l.def, agi:l.agi });
+  cloudSendNews("[快讯] ☁ 「"+S.name+"」买走了「"+l.owner_name+"」摊上的「"+l.item_name+"」");
+  pushNews("[系统] ☁ 从「"+l.owner_name+"」摊上购得「"+l.item_name+"」");
+  CLOUD.stallCache.splice(idx,1);
+  save(); render();
+}
+async function cloudDelistStall(listingId){
+  var r = await CLOUD.sdk.database.from("market_listings").delete().eq("id", listingId).select();
+  var affected = (r.data && r.data.length) ? r.data : [];
+  return affected.length > 0;
+}
+
 /* ============ 存档 ============ */
 var SAVE_KEY = "moyu_jianghu_v1";
 var S = null;          // 当前玩家状态
@@ -319,6 +673,7 @@ function accountNames(){
 function save(){
   if(!S) return;
   try{ localStorage.setItem(accountKey(S.name), JSON.stringify(S)); localStorage.setItem("moyu_cur", S.name); }catch(e){}
+  if(CLOUD.on){ clearTimeout(CLOUD.saveTimer); CLOUD.saveTimer = setTimeout(cloudSaveNow, 3000); } // 云存档防抖 3s
 }
 function loadAccount(name){
   try{ var raw = localStorage.getItem(accountKey(name)); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
@@ -664,8 +1019,27 @@ function htmlLogin(){
     + '<button class="btn solid" onclick="doLogin()">进入江湖</button>'
     + '<button class="btn dim-btn" onclick="goRegister()">初来乍到 · 注册</button>'
     + (accts.length ? '<button class="btn dim-btn" style="margin-left:auto;" onclick="logout()">切换账号</button>' : '')
-    + '</div></div>'
-    + '<p class="hint-line" style="margin-top:20px;">· 存档保存在本机浏览器（'+(accts.length?accts.length:0)+' 位大侠在此闯荡），换电脑可用「导出存档」'
+    + '</div>'
+    + (CLOUD.on
+      ? '<div style="margin-top:16px;padding-top:14px;border-top:1px dashed var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+        + '<span class="cloud-badge">☁ 云端已连接</span>'
+        + '<span class="hint-line" style="margin:0;">云存档与真人联机已开启</span>'
+        + '<button class="btn dim-btn" style="padding:4px 14px;font-size:12px;margin-left:auto;" onclick="cloudLogout()">退出云端</button></div>'
+      : (typeof WorkBuddyCloud !== "undefined"
+        ? '<div class="panel" style="margin-top:16px;background:#0d1a12;">'
+          + '<div class="ptitle"><b>☁</b> cloud --login　云端大侠 —— 云存档 · 真人联机</div>'
+          + '<div class="field"><label>邮箱</label><input id="cloudEmail" type="email" placeholder="用于接收验证码（新玩家自动注册）"></div>'
+          + '<div class="field"><label>验证码</label><input id="cloudCode" maxlength="6" placeholder="先获取验证码"><button class="btn" style="padding:8px 14px;font-size:13px;" onclick="cloudSendCode()">获取验证码</button></div>'
+          + '<div style="display:flex;gap:12px;flex-wrap:wrap;">'
+          + '<button class="btn solid" onclick="cloudVerifyCode()">云端登录 / 注册</button>'
+          + '<button class="btn" onclick="cloudWechatLogin()">微信登录</button>'
+          + '</div>'
+          + '<p class="hint-line" style="margin-top:12px;">· 云端账号跨设备同步存档；世界频道 / 擂台 / 集市 / 排行榜均为真人在线<br>· 不登录也可本地游玩（单机模式，存档在本机浏览器）</p></div>'
+        : ''))
+    + '</div>'
+    + '<p class="hint-line" style="margin-top:20px;">· '+(CLOUD.on ? '☁ 云存档已开启，换设备登录同一账号即可继续闯荡' : '存档保存在本机浏览器（'+(accts.length?accts.length:0)+' 位大侠在此闯荡），换电脑可用「导出存档」')
+    + '<button class="btn dim-btn" style="padding:2px 10px;font-size:12px;margin-left:8px;" onclick="exportSave()">导出存档</button>'
+    + '<button class="btn dim-btn" style="padding:2px 10px;font-size:12px;" onclick="importSave()">导入</button></p>'
     + '<button class="btn dim-btn" style="padding:2px 10px;font-size:12px;margin-left:8px;" onclick="exportSave()">导出存档</button>'
     + '<button class="btn dim-btn" style="padding:2px 10px;font-size:12px;" onclick="importSave()">导入</button></p>'
     + '<p class="hint-line">· 全程无声音、无弹窗，终端界面伪装，<span class="kbd">`</span> 键一键老板伪装　· <span class="kbd">Enter</span> 进入</p>'
@@ -753,6 +1127,7 @@ function reroll(){ if(regRoll.reroll>0){ regRoll.reroll--; regRoll.attrs = rollA
 function createChar(){
   var name = el("createName").value.trim();
   if(name.length<2){ toastHint("名号至少 2 个字"); return; }
+  if(!/^[\u4e00-\u9fa5A-Za-z0-9·]{2,12}$/.test(name)){ toastHint("名号只能用中文、字母、数字"); return; }
   if(loadAccount(name)){ toastHint("江湖上已有这位大侠，换个名号"); return; }
   S = newState(name, "", regRoll.attrs);
   S.hp = maxHp(); S.mp = maxMp();
@@ -1182,14 +1557,25 @@ function htmlMarket(){
   if(!bagHtml) bagHtml = '<p class="hint-line">背包里没有可上架的装备（先去出城打怪捡装备，或换下来的旧装备放这里卖）</p>';
   stallRows = bagHtml;
   var tab = S.ui.marketTab;
+  var cloudStallRows = "";
+  if(CLOUD.on && CLOUD.stallCache.length){
+    cloudStallRows = CLOUD.stallCache.map(function(l){
+      var d = l.atk?("攻 +"+l.atk):(l.def?("防 +"+l.def):(l.agi?("身法 +"+l.agi):""));
+      return '<tr><td>'+esc(l.item_name)+' <span class="cyan" style="font-size:12px;">☁</span></td><td class="num">'+d+'</td><td class="num">'+esc(l.owner_name)+'</td><td class="amber">'+fmt(l.price)+' 文</td>'
+        + '<td><button class="btn" style="padding:3px 12px;font-size:13px;" '+(S.silver>=l.price?"":"disabled")+' onclick="cloudBuyStall('+l.id+')">购买</button></td></tr>';
+    }).join("");
+  }
   return '<div class="tabs">'
     + '<button class="tab'+(tab==="buy"?" on":"")+'" onclick="S.ui.marketTab=\'buy\';save();render()">购买</button>'
     + '<button class="tab'+(tab==="stall"?" on":"")+'" onclick="S.ui.marketTab=\'stall\';save();render()">我的摊位（'+S.listings.length+'）</button>'
-    + '<span style="margin-left:auto;font-size:13px;color:var(--dim);align-self:center;">成交收 5% 手续费 · 秘籍类物品拾获绑定、不可交易</span></div>'
+    + '<span style="margin-left:auto;font-size:13px;color:var(--dim);align-self:center;">成交收 5% 手续费 · '+(CLOUD.on?'☁ 真人摊位已接入':'秘籍类物品拾获绑定、不可交易')+'</span></div>'
     + (tab==="buy"
-      ? '<div class="panel grow"><div class="ptitle"><b>$</b> market list —— 在售物品（当前银两 <span id="marketSilver">'+fmt(S.silver)+'</span> 文）</div>'
+      ? (cloudStallRows
+        ? '<div class="panel" style="margin-bottom:14px;"><div class="ptitle"><b>☁</b> cloud market —— 真人大侠的摊位（云端实时）</div>'
+          + '<table class="tt"><tr><th>物品</th><th>属性</th><th>卖家</th><th>价格</th><th></th></tr>'+cloudStallRows+'</table></div>' : '')
+      + '<div class="panel grow"><div class="ptitle"><b>$</b> market list —— 在售物品（当前银两 <span id="marketSilver">'+fmt(S.silver)+'</span> 文）</div>'
         + '<table class="tt"><tr><th>物品</th><th>属性</th><th>卖家</th><th>价格</th><th></th></tr>'+buyRows+'</table>'
-        + '<p class="hint-line" style="margin-top:12px;">· 上架物品自定价，售出后银两入账（扣 5% 手续费）<br>· 想快速出手？在「江湖频道」吆喝一声：世界频道发言需等级 ≥ 3</p></div>'
+        + '<p class="hint-line" style="margin-top:12px;">· 上架物品自定价，售出后银两入账（扣 5% 手续费）<br>· '+(CLOUD.on?'☁ 你的摊位全服真人可见，出手更快':'想快速出手？在「江湖频道」吆喝一声：世界频道发言需等级 ≥ 3')+'</p></div>'
       : '<div class="panel grow"><div class="ptitle"><b>$</b> market sell —— 上架背包物品（其他大侠会来买走）</div>'+stallRows
         + (S.listings.length?'<div style="border-top:1px dashed var(--border);padding-top:12px;margin-top:10px;"><div class="ptitle" style="margin:0 0 8px;"><b>$</b> 在售中</div>'
           + S.listings.map(function(l,i){ return '<p style="font-size:13.5px;color:#bfe3c9;margin:4px 0;">'+l.name+' · '+l.desc+' · 挂价 '+fmt(l.price)+' 文</p>'; }).join("")+'</div>':'')
@@ -1221,9 +1607,17 @@ function listStall(uid){
     if(S.bag[i].uid===uid){
       var e = S.bag[i];
       var desc = e.atk?"攻 +"+e.atk:(e.def?"防 +"+e.def:(e.agi?"身法 +"+e.agi:""));
-      S.listings.push({uid:e.uid,name:e.name,kind:e.kind,atk:e.atk,def:e.def,agi:e.agi,desc:desc,price:price});
+      var entry = {uid:e.uid,name:e.name,kind:e.kind,atk:e.atk,def:e.def,agi:e.agi,desc:desc,price:price};
+      S.listings.push(entry);
       S.bag.splice(i,1);
-      toastHint("「"+e.name+"」已上架，挂价 "+price+" 文");
+      if(CLOUD.on){
+        (function(item, ent){
+          CLOUD.sdk.database.from("market_listings").insert({ owner_name:S.name, item_name:item.name, kind:item.kind, atk:item.atk||null, def:item.def||null, agi:item.agi||null, price:ent.price }).select()
+            .then(function(r){ if(r.data && r.data[0]) ent.cloudId = r.data[0].id; }).catch(function(){});
+        })(e, entry);
+        cloudSendNews("[快讯] ☁ 「"+S.name+"」上架「"+e.name+"」，售价 "+price+" 文");
+      }
+      toastHint("「"+e.name+"」已上架，挂价 "+price+" 文"+(CLOUD.on?"（云端全服可见）":""));
       break;
     }
   }
@@ -1231,6 +1625,7 @@ function listStall(uid){
 }
 function delist(idx){
   var l = S.listings[idx]; if(!l) return;
+  if(l.cloudId && CLOUD.on){ cloudDelistStall(l.cloudId); }
   S.uidSeq++;
   S.bag.push({uid:S.uidSeq,name:l.name,kind:l.kind,atk:l.atk,def:l.def,agi:l.agi});
   S.listings.splice(idx,1);
@@ -1271,7 +1666,7 @@ function htmlBattle(){
         sectBtns += '<button class="btn" '+(S.mp>=cost?"":"disabled")+' onclick="playerAttack(\'skill\',\''+id+'\')">武功 · '+skillName(id)+'（耗内力 '+cost+'）</button>';
       }
     });
-    return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:14px;">'
+    return '<div class="battle-grid">'
       + '<div class="panel"><div class="ptitle"><b>敌</b> '+esc(b.foe.name)+' · Lv.'+b.foe.lv+'</div>'
       + '<div style="display:flex;align-items:center;gap:12px;"><span style="font-size:13px;color:var(--dim);width:44px;">气血</span><div class="bar" style="height:14px;"><i class="redbar" style="width:'+Math.max(2,Math.round(b.foe.hp/b.foe.hpMax*100))+'%"></i></div><span class="red" style="font-size:13px;">'+b.foe.hp+'/'+b.foe.hpMax+'</span></div></div>'
       + '<div class="panel"><div class="ptitle"><b>我</b> '+esc(S.name)+' · Lv.'+S.level+' · '+sectName()+'</div>'
@@ -1361,7 +1756,20 @@ function myKfRank(){
 }
 function htmlPvp(){
   var botOnline = {};
-  BOTS.forEach(function(b){ botOnline[b.n] = Math.random() < 0.6; });
+  BOTS.forEach(function(b){ botOnline[b.n] = Math.random() < (CLOUD.on ? 0.3 : 0.6); });
+  var humanRows = "";
+  if(CLOUD.on){
+    var humans = CLOUD.onlinePlayers.slice(0,10);
+    if(humans.length){
+      humans.forEach(function(p){
+        humanRows += '<tr><td>'+esc(p.name)+'</td><td class="num">'+(p.sect||"散人")+'</td><td>Lv.'+(p.level||1)+'</td><td>'+(p.kf_total||0)+'</td>'
+          + '<td><span class="grn">☁ 在线</span></td>'
+          + '<td><button class="btn" style="padding:3px 12px;font-size:13px;" onclick="doDuelHuman(\''+esc(p.name).replace(/'/g,"")+'\')">切磋</button></td></tr>';
+      });
+    } else {
+      humanRows = '<tr><td colspan="6" class="faint" style="text-align:center;padding:14px;">暂无其他真人大侠在线——邀同事一起来摸鱼吧（分享本页链接即可）</td></tr>';
+    }
+  }
   var rows = "";
   var sorted = BOTS.slice().sort(function(a,b){ return botKf(b)-botKf(a); });
   sorted.forEach(function(b){
@@ -1384,7 +1792,12 @@ function htmlPvp(){
     + '<span class="dim">切磋不掉装备 · 不损气血上限 · 胜者声望 +2</span>'
     + '<span style="margin-left:auto;">我的排名：武功总等级榜 第 <b id="myKfRank">'+myKfRank()+'</b> 名</span></div>'
     + '<div class="two-col">'
-    + '<div class="col"><div class="panel grow"><div class="ptitle"><b>$</b> pvp challenge —— 挑一位大侠过招（挑战后自动演算，无需对方在线）</div>'
+    + '<div class="col">'
+    + (CLOUD.on
+      ? '<div class="panel"><div class="ptitle"><b>☁</b> cloud arena —— 真人大侠（云端在线 · 实时）</div>'
+        + '<table class="tt"><tr><th>大侠</th><th>门派</th><th>等级</th><th>武功总等级</th><th>状态</th><th></th></tr>'+humanRows+'</table></div>'
+      : '')
+    + '<div class="panel grow"><div class="ptitle"><b>$</b> pvp challenge —— 挑一位大侠过招（挑战后自动演算，无需对方在线）</div>'
     + '<table class="tt"><tr><th>大侠</th><th>门派</th><th>等级</th><th>武功总等级</th><th>状态</th><th></th></tr>'+rows+'</table></div></div>'
     + '<div class="col">'+last+'</div></div>'
     + '<div class="cmdline"><button class="btn dim-btn" style="padding:4px 14px;font-size:13px;" onclick="go(\'hall\')">← 返回大厅（Esc）</button><span style="margin-left:auto;font-size:12px;" class="dim">胜负由双方当前属性、武功与装备自动演算，看脸也看练度</span></div>';
@@ -1478,11 +1891,13 @@ function sendChat(){
     if(S.level<3){ toastHint("世界频道需 Lv.3"); return; }
     pushWorld("[世界] "+S.name+"（你）："+v);
     S.worldLog[S.worldLog.length-1].me = true;
-    if(Math.random()<0.4) setTimeout(botReply, ri(3000,9000));
+    cloudSendChat("world", v);
+    if(!CLOUD.on && Math.random()<0.4) setTimeout(botReply, ri(3000,9000));
   } else if(S.ui.chatTab==="sect" && S.sect){
     pushSect("[门派] "+S.name+"（你）："+v);
     S.sectLog[S.sectLog.length-1].me = true;
-    if(Math.random()<0.4) setTimeout(botSectReply, ri(3000,9000));
+    cloudSendChat("sect", v);
+    if(!CLOUD.on && Math.random()<0.4) setTimeout(botSectReply, ri(3000,9000));
   }
   inp.value = "";
   save(); render();
@@ -1505,18 +1920,20 @@ function botSectReply(){
 function htmlRank(){
   var tab = S.ui.rankTab;
   var main = "";
+  if(CLOUD.on && !CLOUD.rankCache) cloudRankLoad();
+  var humans = (CLOUD.on && CLOUD.rankCache) ? CLOUD.rankCache : [];
   if(tab==="kf"){
-    var list = BOTS.map(function(b){ return {n:b.n, s:b.s?SECTS[b.s].name:"散人", v:botKf(b), me:false}; });
+    var list = humans.map(function(p){ return {n:p.name+" ☁", s:p.sect||"散人", v:p.kf_total||0, me:false}; }).concat(BOTS.map(function(b){ return {n:b.n, s:b.s?SECTS[b.s].name:"散人", v:botKf(b), me:false}; }));
     list.push({n:S.name+"（你）", s:sectName(), v:kfTotal(), me:true});
     list.sort(function(a,b){ return b.v-a.v; });
-    main = rankTable("rank --kungfu —— 武功总等级榜", list, "总等级", function(i,r){ return (r.me?' class="hl"':'')+'<td class="'+(i<3?'amber':(r.me?'grn':'num'))+'">'+(i+1)+'</td><td>'+esc(r.n)+'</td><td class="num">'+r.s+'</td><td>'+r.v+'</td>'; }, ["排名","大侠","门派","总等级"]);
+    main = rankTable("rank --kungfu —— 武功总等级榜"+(humans.length?"（含 "+humans.length+" 位真人大侠）":""), list, "总等级", function(i,r){ return (r.me?' class="hl"':'')+'<td class="'+(i<3?'amber':(r.me?'grn':'num'))+'">'+(i+1)+'</td><td>'+esc(r.n)+'</td><td class="num">'+r.s+'</td><td>'+r.v+'</td>'; }, ["排名","大侠","门派","总等级"]);
   } else if(tab==="wealth"){
-    var list2 = BOTS.map(function(b){ return {n:b.n, s:b.s?SECTS[b.s].name:"散人", v:botWealth(b), me:false}; });
+    var list2 = humans.map(function(p){ return {n:p.name+" ☁", s:p.sect||"散人", v:p.silver||0, me:false}; }).concat(BOTS.map(function(b){ return {n:b.n, s:b.s?SECTS[b.s].name:"散人", v:botWealth(b), me:false}; }));
     list2.push({n:S.name+"（你）", s:sectName(), v:wealth(), me:true});
     list2.sort(function(a,b){ return b.v-a.v; });
     main = rankTable("rank --wealth —— 财富榜", list2, "银两", function(i,r){ return (r.me?' class="hl"':'')+'<td class="'+(i<3?'amber':(r.me?'grn':'num'))+'">'+(i+1)+'</td><td>'+esc(r.n)+'</td><td class="amber">'+fmt(r.v)+' 文</td>'; }, ["#","大侠","银两"]);
   } else {
-    var list3 = BOTS.map(function(b){ return {n:b.n, s:b.s?SECTS[b.s].name:"散人", v:botFame(b), me:false}; });
+    var list3 = humans.map(function(p){ return {n:p.name+" ☁", s:p.sect||"散人", v:p.fame||0, me:false}; }).concat(BOTS.map(function(b){ return {n:b.n, s:b.s?SECTS[b.s].name:"散人", v:botFame(b), me:false}; }));
     list3.push({n:S.name+"（你）", s:sectName(), v:S.fame, me:true});
     list3.sort(function(a,b){ return b.v-a.v; });
     main = rankTable("rank --fame —— 声望榜", list3, "声望", function(i,r){ return (r.me?' class="hl"':'')+'<td class="'+(i<3?'amber':(r.me?'grn':'num'))+'">'+(i+1)+'</td><td>'+esc(r.n)+'</td><td>'+r.v+'</td>'; }, ["#","大侠","声望"])
@@ -1545,6 +1962,9 @@ function toggleBoss(){
   bossOn = !bossOn;
   el("bossOverlay").style.display = bossOn ? "flex" : "none";
   document.title = bossOn ? "项目进度跟踪表_2026Q4_final_v3.xlsx - Excel" : "bash — 132×41";
+  var bbtn = el("bossBtn");
+  bbtn.className = bossOn ? "boss-on" : "";
+  bbtn.textContent = bossOn ? "A1" : "$ _";
   if(bossOn){
     var d = new Date();
     el("bossDate").textContent = "更新于 "+pad2(d.getMonth()+1)+"-"+pad2(d.getDate())+" "+pad2(d.getHours())+":"+pad2(d.getMinutes())+" · 责任人：张伟";
@@ -1556,7 +1976,7 @@ var chatTimer = 0, newsTimer = 0, onlineTimer = 0, stallTimer = 0, buyTimer = 0;
 function worldTick(){
   if(!S) return;
   chatTimer--; newsTimer--; onlineTimer--; stallTimer--; buyTimer--;
-  if(chatTimer<=0){ chatTimer = ri(12,32); if(Math.random()<0.7){ var b=pick(BOTS); pushWorld("[世界] "+b.n+"："+pick(CHAT_WORLD)); } else if(S.sect && Math.random()<0.5){ var sb=pick(BOTS.filter(function(x){return x.s===S.sect;}))||pick(BOTS); pushSect("[门派] "+sb.n+"："+pick(CHAT_SECT)); } }
+  if(chatTimer<=0){ chatTimer = CLOUD.on ? ri(60,140) : ri(12,32); if(Math.random()< (CLOUD.on?0.35:0.7)){ var b=pick(BOTS); pushWorld("[世界] "+b.n+"："+pick(CHAT_WORLD)); } else if(S.sect && Math.random()<0.5){ var sb=pick(BOTS.filter(function(x){return x.s===S.sect;}))||pick(BOTS); pushSect("[门派] "+sb.n+"："+pick(CHAT_SECT)); } }
   if(newsTimer<=0){ newsTimer = ri(50,110); genNews(); }
   if(onlineTimer<=0){ onlineTimer = 10; var h=new Date().getHours(); var base = 180 + 180*Math.sin((h-4)/24*Math.PI*2); S.online = Math.max(60, Math.round(base + rnd(-25,25))); }
   if(stallTimer<=0){ stallTimer = ri(120,260); refreshBotStall(); if(SCR==="market" && S.ui.marketTab==="buy") render(); }
@@ -1584,6 +2004,13 @@ setInterval(function(){
   S.hp = Math.floor(S.hp); S.mp = Math.floor(S.mp);
   // 轻量刷新当前屏的动态区域
   lightRefresh();
+  // 云端：每 5 秒轮询（聊天/在线/集市成交/战报），每 60 秒心跳
+  if(CLOUD.on){
+    CLOUD.sec++;
+    if(CLOUD.sec >= 5){ CLOUD.sec = 0; cloudPollTick(false); }
+    CLOUD.min++;
+    if(CLOUD.min >= 60){ CLOUD.min = 0; cloudHeartbeat(); }
+  }
   // 每分钟落一次盘（另有事件驱动保存）
   if(now % 60000 < 1100) save();
 }, 1000);
@@ -1645,6 +2072,7 @@ document.addEventListener("keydown", function(e){
   }
   if(S){ refreshBotStall(); refreshBotStall(); }
   render();
+  cloudInit(); // 云端异步初始化：有会话则自动恢复云存档与联机（不阻塞本地体验）
 })();
 </script>
 </body>
