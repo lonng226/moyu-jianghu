@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bash — 132×41</title>
+<link rel="icon" href="data:,">
+<style>
+:root{
+  --bg:#0b100c; --panel:#0f1712; --panel2:#132016; --border:#1d3325; --border2:#2a4a35;
+  --green:#3ddc84; --dim:#7a9b87; --faint:#4a6353; --amber:#e8b04a; --red:#e06060; --cyan:#5ec9dd;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{background:var(--bg);margin:0;font-family:"Cascadia Mono","Consolas","JetBrains Mono","Courier New",monospace;}
+#app{height:100vh;display:flex;flex-direction:column;color:var(--green);}
+.tbar{flex:0 0 34px;display:flex;align-items:center;gap:10px;background:#0d130e;border-bottom:1px solid var(--border);padding:0 14px;font-size:12px;color:var(--dim);}
+.tbar .dots{display:flex;gap:6px;}
+.tbar .dots i{width:10px;height:10px;border-radius:50%;background:#233828;display:block;}
+.tbar .ttl{flex:1;text-align:center;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sbody{flex:1;padding:22px 32px;display:flex;flex-direction:column;min-height:0;overflow:auto;}
+.dim{color:var(--dim);} .faint{color:var(--faint);} .amber{color:var(--amber);} .red{color:var(--red);} .cyan{color:var(--cyan);} .grn{color:var(--green);}
+.panel{border:1px solid var(--border);background:var(--panel);border-radius:6px;padding:16px 18px;}
+.ptitle{font-size:13px;color:var(--dim);letter-spacing:2px;margin-bottom:12px;border-bottom:1px dashed var(--border);padding-bottom:9px;}
+.ptitle b{color:var(--green);font-weight:600;}
+.btn{display:inline-block;border:1px solid var(--green);color:var(--green);background:transparent;padding:7px 16px;font-size:14px;font-family:inherit;cursor:pointer;border-radius:4px;text-decoration:none;transition:all .12s;}
+.btn:hover{background:var(--green);color:#06130a;}
+.btn.dim-btn{border-color:var(--dim);color:var(--dim);}
+.btn.dim-btn:hover{background:var(--dim);color:#06130a;}
+.btn.solid{background:var(--green);color:#06130a;font-weight:700;}
+.btn.solid:hover{background:#63f0a0;}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+.btn:disabled:hover{background:transparent;color:var(--green);}
+.btn.dim-btn:disabled:hover{background:transparent;color:var(--dim);}
+.kbd{display:inline-block;border:1px solid var(--border2);border-radius:3px;padding:0 6px;font-size:12px;color:var(--dim);background:#0d130e;}
+.bar{height:12px;border:1px solid var(--border2);border-radius:3px;background:#0a0f0b;overflow:hidden;position:relative;flex:1;}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,#2c9e63,#3ddc84);transition:width .3s;}
+.bar>i.amberbar{background:linear-gradient(90deg,#b5822f,#e8b04a);}
+.bar>i.redbar{background:linear-gradient(90deg,#a83c3c,#e06060);}
+.bar>i.cyanbar{background:linear-gradient(90deg,#3a89a0,#5ec9dd);}
+.tt{width:100%;border-collapse:collapse;font-size:14px;}
+.tt th{color:var(--dim);font-weight:400;text-align:left;border-bottom:1px solid var(--border);padding:6px 10px;font-size:13px;letter-spacing:1px;}
+.tt td{padding:8px 10px;border-bottom:1px dashed #16241b;color:#bfe3c9;}
+.tt tr.hl td{background:#12241a;color:var(--green);border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);}
+.tt .num{color:var(--dim);}
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.menu-item{display:flex;align-items:center;gap:14px;border:1px solid var(--border);background:var(--panel);border-radius:6px;padding:14px 16px;cursor:pointer;transition:all .12s;text-decoration:none;}
+.menu-item:hover{border-color:var(--green);background:var(--panel2);}
+.menu-item .no{font-size:20px;color:var(--faint);width:30px;font-weight:700;}
+.menu-item:hover .no{color:var(--green);}
+.menu-item .mt{font-size:16px;color:var(--green);}
+.menu-item .ms{font-size:12px;color:var(--dim);margin-top:3px;}
+.stat-strip{display:flex;align-items:center;gap:20px;border:1px solid var(--border);background:#0d130e;border-radius:6px;padding:9px 16px;font-size:14px;color:#bfe3c9;flex-wrap:wrap;}
+.stat-strip b{color:var(--green);font-weight:600;}
+.log{flex:1;overflow-y:auto;border:1px solid var(--border);background:#0a0f0b;border-radius:6px;padding:14px 16px;font-size:14px;line-height:1.9;color:#a8d4b4;min-height:120px;}
+.log p{margin:0;}
+.log .you{color:var(--green);}
+.log .foe{color:var(--red);}
+.log .sys{color:var(--cyan);}
+.log .qy{color:var(--amber);}
+.log .me{color:#e8e8b0;}
+.cmdline{border-top:1px solid var(--border);padding:10px 0 2px;display:flex;align-items:center;gap:10px;font-size:14px;color:var(--dim);flex-wrap:wrap;}
+.cmdline .cur{display:inline-block;width:9px;height:17px;background:var(--green);animation:blink 1.1s steps(1) infinite;vertical-align:middle;}
+@keyframes blink{50%{opacity:0;}}
+.tabs{display:flex;gap:8px;margin-bottom:14px;}
+.tab{border:1px solid var(--border);color:var(--dim);padding:6px 18px;font-size:14px;border-radius:4px;cursor:pointer;background:transparent;font-family:inherit;}
+.tab.on{border-color:var(--green);color:var(--green);background:#12241a;}
+.field{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+.field label{width:90px;color:var(--dim);font-size:14px;text-align:right;flex:none;}
+.field input{flex:1;max-width:420px;background:#0a0f0b;border:1px solid var(--border2);color:var(--green);font-family:inherit;font-size:15px;padding:9px 14px;border-radius:4px;outline:none;}
+.field input:focus{border-color:var(--green);}
+.attr-row{display:flex;align-items:center;gap:16px;margin-bottom:14px;}
+.attr-row .an{width:70px;font-size:15px;flex:none;}
+.attr-row .av{width:36px;text-align:right;font-size:18px;font-weight:700;color:var(--green);flex:none;}
+.attr-row .ah{width:150px;font-size:12px;color:var(--faint);flex:none;}
+.hint-line{font-size:12.5px;color:var(--faint);line-height:1.9;}
+.two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:20px;flex:1;min-height:0;}
+.two-col.even{grid-template-columns:1fr 1.5fr;}
+.two-col.wide{grid-template-columns:1.5fr 1fr;}
+.col{display:flex;flex-direction:column;gap:16px;min-height:0;}
+.hang-bar{display:flex;align-items:center;gap:18px;border:1px solid var(--border2);background:#101c14;border-radius:6px;padding:11px 16px;font-size:14px;color:#cde8d6;flex-wrap:wrap;}
+.spin{display:inline-block;color:var(--amber);}
+.grow{flex:1;min-height:0;}
+/* 老板键伪装层 */
+#bossOverlay{position:fixed;inset:0;z-index:1000;display:none;flex-direction:column;background:#f4f6f8;color:#1f2733;font-family:"Microsoft YaHei","微软雅黑",sans-serif;}
+#bossOverlay .bbar{flex:0 0 34px;display:flex;align-items:center;gap:10px;background:#1e56a0;color:#fff;padding:0 14px;font-size:12px;font-family:"Cascadia Mono","Consolas",monospace;}
+#bossOverlay .bbar .dots{display:flex;gap:6px;}
+#bossOverlay .bbar .dots i{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.35);display:block;}
+#bossOverlay .bbar .ttl{flex:1;text-align:center;}
+.boss-body{flex:1;padding:28px 40px;overflow:auto;position:relative;}
+.boss-table{width:100%;border-collapse:collapse;font-size:14px;}
+.boss-table th{background:#e8ecf1;border:1px solid #ccd3dc;padding:10px 14px;font-weight:600;text-align:left;}
+.boss-table td{border:1px solid #dde2e9;padding:10px 14px;}
+.pct{display:inline-block;width:120px;height:12px;background:#e3e8ee;border-radius:2px;vertical-align:middle;margin-right:10px;overflow:hidden;}
+.pct>i{display:block;height:100%;background:#3f8f5f;}
+.tag-ok{color:#2e7d4f;} .tag-run{color:#b07c1f;} .tag-no{color:#9aa2ad;}
+.boss-note{margin-top:24px;padding:14px 18px;background:#eef2f7;border-left:3px solid #1e56a0;font-size:13px;color:#4a5568;}
+.boss-tip{position:absolute;right:16px;bottom:10px;font-size:11px;color:#c3c9d2;}
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-thumb{background:#1d3325;border-radius:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="tbar">
+    <span class="dots"><i></i><i></i><i></i></span>
+    <span class="ttl" id="tbarTtl">jianghu@office-pc:~/moyu — bash — 132×41</span>
+    <span id="tbarClock">--:--:--</span><span>UTF-8</span>
+  </div>
+  <div class="sbody" id="sbody"></div>
+</div>
+
+<!-- 老板键伪装层：任意界面按 ` 进入 -->
+<div id="bossOverlay">
+  <div class="bbar"><span class="dots"><i></i><i></i><i></i></span><span class="ttl">项目进度跟踪表_2026Q4_final_v3.xlsx — Excel</span><span style="color:#cfe0f5;">只读</span></div>
+  <div class="boss-body">
+    <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:6px;">
+      <h1 style="margin:0;font-size:21px;color:#1a2733;">2026 年 Q4 · 重点项目进度跟踪表</h1>
+      <span style="font-size:12px;color:#8b95a3;" id="bossDate">更新于 10-16 09:30 · 责任人：张伟</span>
+    </div>
+    <div style="font-size:12px;color:#8b95a3;margin-bottom:20px;">本周例会材料 · 仅供内部同步，请勿外传</div>
+    <table class="boss-table">
+      <tr><th style="width:180px;">项目模块</th><th style="width:110px;">负责人</th><th style="width:110px;">当前状态</th><th>完成度</th><th style="width:90px;">风险等级</th><th style="width:150px;">下次同步</th></tr>
+      <tr><td>需求评审</td><td>张伟</td><td class="tag-ok">已完成</td><td><span class="pct"><i style="width:100%"></i></span>100%</td><td class="tag-ok">低</td><td>10-18</td></tr>
+      <tr><td>前端开发</td><td>李娜</td><td class="tag-run">进行中</td><td><span class="pct"><i style="width:65%"></i></span>65%</td><td class="tag-run">中</td><td>10-17</td></tr>
+      <tr><td>接口联调</td><td>王强</td><td class="tag-no">未开始</td><td><span class="pct"><i style="width:0%"></i></span>0%</td><td class="tag-run">中</td><td>10-21</td></tr>
+      <tr><td>测试验收</td><td>赵敏</td><td class="tag-no">未开始</td><td><span class="pct"><i style="width:0%"></i></span>0%</td><td class="tag-ok">低</td><td>10-25</td></tr>
+      <tr><td>上线部署</td><td>待定</td><td class="tag-no">未开始</td><td><span class="pct"><i style="width:0%"></i></span>0%</td><td class="tag-ok">低</td><td>10-30</td></tr>
+    </table>
+    <div class="boss-note">备注：前端开发进度 65%，落后计划 1.5 天，主要受登录模块重构影响，已在 10-15 例会对齐，不影响整体里程碑。</div>
+    <div class="boss-tip">按 ` 返回 · 本页无任何声音与弹窗</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============ 工具 ============ */
+var el = function(id){ return document.getElementById(id); };
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function rnd(a,b){ return a + Math.random()*(b-a); }
+function ri(a,b){ return Math.floor(rnd(a,b+1)); }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function fmt(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,","); }
+function pad2(n){ return (n<10?"0":"")+n; }
+function today(){ var d=new Date(); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
+function mmss(sec){ sec=Math.max(0,Math.floor(sec)); return pad2(Math.floor(sec/60))+":"+pad2(sec%60); }
+
+/* ============ 静态数据 ============ */
+var ATTR_NAMES = { tl:"膂力", sf:"身法", wx:"悟性", gg:"根骨" };
+
+var BASIC_SKILLS = [
+  { id:"quan", name:"基本拳脚" },
+  { id:"dao",  name:"基本刀法" },
+  { id:"jian", name:"基本剑法" },
+  { id:"qing", name:"基本轻功" },
+  { id:"nei",  name:"基本内功" }
+];
+
+var SECTS = {
+  shaolin:{ name:"少林", master:"玄苦大师",  req:{attr:"gg",v:18}, reqDesc:"根骨 ≥ 18" },
+  wudang: { name:"武当", master:"冲虚道长",  req:{attr:"wx",v:20}, reqDesc:"悟性 ≥ 20" },
+  huashan:{ name:"华山", master:"风清扬",    req:{attr:"sf",v:18}, reqDesc:"身法 ≥ 18" },
+  emei:   { name:"峨嵋", master:"灭绝师太",  req:{attr:"wx",v:18}, reqDesc:"悟性 ≥ 18" },
+  gaibang:{ name:"丐帮", master:"洪七公",    req:null, reqDesc:"不问出身" },
+  mojiao: { name:"魔教", master:"东方不败",  req:{fame:50}, reqDesc:"声望 ≥ 50 · 邪派", evil:true }
+};
+
+var SECT_SKILLS = {
+  shaolin:[
+    { id:"sl_cq", name:"少林长拳", cost:{pot:30, silver:50},  req:null, reqDesc:"已拜入门" },
+    { id:"sl_lh", name:"罗汉拳",   cost:{pot:80, silver:120}, req:{skill:"quan",v:30}, reqDesc:"基本拳脚 30 级" },
+    { id:"sl_nh", name:"拈花指",   cost:{pot:200,silver:300}, req:{attr:"wx",v:25}, reqDesc:"悟性 ≥ 25" }
+  ],
+  wudang:[
+    { id:"wd_mz", name:"武当绵掌",   cost:{pot:30, silver:50},  req:null, reqDesc:"已拜入门" },
+    { id:"wd_tj", name:"太极剑",     cost:{pot:80, silver:120}, req:{skill:"jian",v:30}, reqDesc:"基本剑法 30 级" },
+    { id:"wd_cy", name:"纯阳无极功", cost:{pot:200,silver:300}, req:{skill:"nei",v:35}, reqDesc:"基本内功 35 级" }
+  ],
+  huashan:[
+    { id:"hs_jian", name:"华山剑法", cost:{pot:30, silver:50},  req:null, reqDesc:"已拜入门" },
+    { id:"hs_kf",   name:"狂风快剑", cost:{pot:80, silver:120}, req:{attr:"sf",v:25}, reqDesc:"身法 ≥ 25" },
+    { id:"hs_zx",   name:"紫霞神功", cost:{pot:200,silver:300}, req:{skill:"nei",v:30}, reqDesc:"基本内功 30 级" }
+  ],
+  emei:[
+    { id:"em_hf", name:"回风拂柳剑", cost:{pot:30, silver:50},  req:null, reqDesc:"已拜入门" },
+    { id:"em_px", name:"飘雪穿云掌", cost:{pot:80, silver:120}, req:{skill:"quan",v:25}, reqDesc:"基本拳脚 25 级" },
+    { id:"em_jy", name:"峨嵋九阳功", cost:{pot:200,silver:300}, req:{skill:"nei",v:30}, reqDesc:"基本内功 30 级" }
+  ],
+  gaibang:[
+    { id:"gb_tz", name:"太祖长拳",   cost:{pot:30, silver:50},  req:null, reqDesc:"已拜入门" },
+    { id:"gb_dg", name:"打狗棒法",   cost:{pot:80, silver:120}, req:{skill:"quan",v:35}, reqDesc:"基本拳脚 35 级" },
+    { id:"gb_xl", name:"降龙十八掌", cost:{pot:400,silver:600}, req:{fame:100}, reqDesc:"声望 ≥ 100" }
+  ],
+  mojiao:[
+    { id:"mj_ym", name:"幽冥爪",   cost:{pot:30, silver:50},  req:null, reqDesc:"已拜入门" },
+    { id:"mj_sh", name:"摄魂大法", cost:{pot:120,silver:200}, req:{attr:"wx",v:22}, reqDesc:"悟性 ≥ 22" },
+    { id:"mj_kh", name:"葵花神功", cost:{pot:500,silver:800}, req:{skill:"nei",v:40}, reqDesc:"基本内功 40 级" }
+  ]
+};
+function skillName(id){
+  for(var i=0;i<BASIC_SKILLS.length;i++) if(BASIC_SKILLS[i].id===id) return BASIC_SKILLS[i].name;
+  for(var k in SECT_SKILLS) for(var j=0;j<SECT_SKILLS[k].length;j++) if(SECT_SKILLS[k][j].id===id) return SECT_SKILLS[k][j].name;
+  return id;
+}
+
+var JOBS = [
+  { id:"pao",  name:"客栈 · 跑堂",   req:null, reqDesc:"无",            pay:5,  note:"稳定无风险",
+    flavor:["你麻利地擦净一张桌子，掌柜点头：+{p} 文","你给客官添了壶热茶，得赏钱：+{p} 文","你端菜稳稳当当，掌柜暗暗点头：+{p} 文","你收拾了三间上房：+{p} 文"] },
+  { id:"biao", name:"镖局 · 趟子手", req:{attr:"tl",v:20}, reqDesc:"膂力 ≥ 20", pay:12, note:"可能遇袭，需战斗",
+    flavor:["你护送一趟短镖平安抵达：+{p} 文","你喊趟子喊得响亮，镖头满意：+{p} 文","你押镖绕开匪哨，掌柜夸你机灵：+{p} 文"] },
+  { id:"chai", name:"柴房 · 劈柴",   req:{skill:"dao",v:10}, reqDesc:"基本刀法 ≥ 10", pay:8, note:"额外刀法修为 +5/轮",
+    flavor:["你手起刀落，劈了满满一垛柴：+{p} 文","你斧法利落，火头僧频频点头：+{p} 文"] }
+];
+
+var ZONES = [
+  { id:"hj",  name:"荒郊",   req:1,  foes:[ {name:"野狗",lv:2,hp:40},{name:"流氓",lv:3,hp:60},{name:"山贼",lv:6,hp:120} ] },
+  { id:"lzg", name:"乱葬岗", req:8,  foes:[ {name:"游魂",lv:9,hp:190},{name:"僵尸",lv:12,hp:280} ] },
+  { id:"hfz", name:"黑风寨", req:15, foes:[ {name:"山贼喽啰",lv:14,hp:340},{name:"山贼头目",lv:18,hp:520} ] },
+  { id:"jqg", name:"绝情谷", req:25, foes:[ {name:"银环蛇",lv:24,hp:640},{name:"潭底鳄鱼",lv:28,hp:860} ] }
+];
+
+var SHOP = [
+  { name:"精钢刀",   kind:"weapon", atk:12, price:320, seller:"沉默的掌柜" },
+  { name:"皮甲",     kind:"armor",  def:5,  price:120, seller:"张货郎" },
+  { name:"粗布衣",   kind:"armor",  def:2,  price:30,  seller:"张货郎" },
+  { name:"快靴",     kind:"shoes",  agi:3,  price:90,  seller:"回春堂杂货" },
+  { name:"生锈铁剑", kind:"weapon", atk:5,  price:60,  seller:"拾荒老人" },
+  { name:"金创药",   kind:"item",   item:"jinchuang", price:15, seller:"回春堂", desc:"回复 50 气血" }
+];
+
+var TITLES = [ [0,"无名小卒"],[50,"初入江湖"],[200,"小有名气"],[500,"声名鹊起"],[1000,"名动一方"],[2000,"一代宗师"],[5000,"天下第一"] ];
+
+var BOTS = [
+  { n:"扫地僧人",         s:"shaolin", lv:31, kf:118, fame:288, we:9200,   g:0.35 },
+  { n:"丐帮帮主不是帮主", s:"gaibang", lv:28, kf:96,  fame:320, we:21000,  g:0.28 },
+  { n:"令狐冲不冲",       s:"huashan", lv:23, kf:84,  fame:201, we:45200,  g:0.5  },
+  { n:"东方不吃素",       s:"mojiao",  lv:22, kf:81,  fame:150, we:12800,  g:0.32 },
+  { n:"少林扫地二号",     s:"shaolin", lv:19, kf:62,  fame:64,  we:7600,   g:0.22 },
+  { n:"郭大路大步走",     s:"gaibang", lv:17, kf:66,  fame:98,  we:33800,  g:0.3  },
+  { n:"沉默的掌柜",       s:"wudang",  lv:15, kf:58,  fame:76,  we:128400, g:0.18 },
+  { n:"血刀老祖亲传",     s:"mojiao",  lv:14, kf:47,  fame:41,  we:4100,   g:0.28 },
+  { n:"风清扬的小跟班",   s:"huashan", lv:12, kf:41,  fame:33,  we:5400,   g:0.42 },
+  { n:"峨眉小师妹",       s:"emei",    lv:10, kf:34,  fame:28,  we:6800,   g:0.45 },
+  { n:"武当挂机王",       s:"wudang",  lv:9,  kf:29,  fame:19,  we:2900,   g:0.5  },
+  { n:"隔壁老王",         s:"gaibang", lv:8,  kf:44,  fame:52,  we:1500,   g:0.3  },
+  { n:"拾荒老人",         s:"gaibang", lv:7,  kf:22,  fame:14,  we:900,    g:0.2  },
+  { n:"扬州小白龙",       s:null,      lv:6,  kf:19,  fame:9,   we:2200,   g:0.4  },
+  { n:"摸鱼真难",         s:null,      lv:4,  kf:21,  fame:6,   we:300,    g:0.5  },
+  { n:"客栈跑堂甲",       s:null,      lv:3,  kf:11,  fame:2,   we:150,    g:0.3  }
+];
+
+var CHAT_WORLD = [
+  "今晚八点华山之巅，华山论剑，缺人速来！",
+  "出售精钢刀 攻+12，要的集市见，320 文不还价",
+  "有人组队刷山贼吗？荒郊这边，掉了把铁剑想卖",
+  "新手求带……刚被野狗咬死了两次",
+  "丐帮的兄弟注意了，帮主喊你们回去搬酒",
+  "打狗棒法谁练到 30 了？交流下心得",
+  "魔教的人最近别惹，东方教主心情不好",
+  "挂机劈柴一天，刀法+90 修为，摸鱼真香",
+  "谁把我的摊位价格抄了？一模一样的刀便宜 5 文？！",
+  "打坐出顿悟了！感谢少林，感谢玄苦大师",
+  "刚才切磋输给隔壁老王了，此人深藏不露",
+  "跑堂跑出拳谱残页是什么运气？？在线吸欧气",
+  "萌新问下，潜能除了打架还有别的来路吗",
+  "峨眉的师姐们今天在擂台好猛……",
+  "有内鬼！昨天集市有人卖假金创药（bushi）",
+  "今天风真大，适合快剑",
+  "谁再世界频道刷屏我就……我就也刷两条",
+  "打工是不可能打工的，这辈子只能跑堂维持生活",
+  "乱葬岗的僵尸爆率不错，就是费药",
+  "求快靴一双，有的集市挂一下，秒收"
+];
+var CHAT_SECT = [
+  "新入门的师弟，先把基本拳脚练到 20 级再学罗汉拳",
+  "今日门派任务做了吗？白送潜能",
+  "掌门又在后山练功，动静好大",
+  "师弟们加油，咱们少林总等级榜快被丐帮追上了",
+  "打坐要诀：心静自然凉，工位空调开低点",
+  "谁有多余的金创药，切磋完血不够了",
+  "同门们，切磋找我，今日还剩 5 次",
+  "门派频道禁止发广告，说了八百遍了",
+  "顿悟玄学：午后打坐概率高（不保真）",
+  "叛门需谨慎，声望减半不是开玩笑的"
+];
+var NEWS_TPL = [
+  "[快讯] 「{a}」在擂台击败「{b}」",
+  "[快讯] 「{a}」打坐顿悟，{s}升至 {n} 级",
+  "[快讯] 「{a}」上架「{it}」，售价 {p} 文",
+  "[奇遇] 「{a}」跑堂时拾获《拳谱残页》×1",
+  "[快讯] 「{a}」叛出{st}，投入魔教，声望减半",
+  "[快讯] 「{a}」在{zone}遭遇{m}，大战三百回合险胜",
+  "[快讯] 「{a}」挑战掌门成功，名动江湖",
+  "[快讯] 「{a}」的摊位「{it}」被神秘人买走"
+];
+var EQUIP_KIND_NAME = { weapon:"武器", armor:"防具", shoes:"鞋子" };
+var ATTR_KEY = { tl:"膂力", sf:"身法", wx:"悟性", gg:"根骨" };
+
+/* ============ 存档 ============ */
+var SAVE_KEY = "moyu_jianghu_v1";
+var S = null;          // 当前玩家状态
+var SCR = "login";     // 当前屏
+var bossOn = false;
+var lastTick = Date.now();
+var regRoll = null;    // 创建角色临时掷骰
+
+function accountKey(name){ return "moyu_acct_" + name; }
+function accountNames(){
+  var out = [];
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      if(k && k.indexOf("moyu_acct_")===0) out.push(k.slice(10));
+    }
+  }catch(e){}
+  return out;
+}
+function save(){
+  if(!S) return;
+  try{ localStorage.setItem(accountKey(S.name), JSON.stringify(S)); localStorage.setItem("moyu_cur", S.name); }catch(e){}
+}
+function loadAccount(name){
+  try{ var raw = localStorage.getItem(accountKey(name)); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+}
+
+function newSkill(lv){ return { lv:lv||0, xl:0 }; }
+function rollAttrs(){
+  return { tl:ri(10,30), sf:ri(10,30), wx:ri(10,30), gg:ri(10,30) };
+}
+function newState(name, pass, attrs){
+  return {
+    name:name, pass:pass, screen:"hall",
+    attrs:attrs, hp:0, mp:0, silver:50, pot:20, fame:0, exp:0, level:1,
+    sect:null, skills:{ quan:newSkill(1), dao:newSkill(0), jian:newSkill(0), qing:newSkill(0), nei:newSkill(0) },
+    equip:{ weapon:{uid:1,name:"木棍",kind:"weapon",atk:2}, armor:{uid:2,name:"布衣",kind:"armor",def:1}, shoes:{uid:3,name:"草鞋",kind:"shoes",agi:0} },
+    bag:[], items:{ jinchuang:1, quanpu:0 },
+    uidSeq:10,
+    idle:null, workLog:[], battle:null, pvpLog:[], pvpLast:null,
+    listings:[], botStall:[],
+    news:[], worldLog:[], sectLog:[],
+    daily:{ date:today(), duels:0, quest:false, master:false },
+    online:ri(300,350), epoch:Date.now(), created:Date.now(),
+    ui:{ marketTab:"buy", chatTab:"world", rankTab:"kf" }
+  };
+}
+
+/* ============ 数值推导 ============ */
+function sk(id){ return S.skills[id] || null; }
+function neiLv(){ var s=sk("nei"); return s?s.lv:0; }
+function qingLv(){ var s=sk("qing"); return s?s.lv:0; }
+function maxHp(){ return 12 + S.attrs.gg*6 + neiLv()*2; }
+function maxMp(){ return (S.attrs.gg + neiLv())*2; }
+function weaponAtk(){ return S.equip.weapon ? (S.equip.weapon.atk||0) : 0; }
+function pAtk(){ return S.attrs.tl + weaponAtk(); }
+function pHIt(){ return 70 + Math.round(S.attrs.sf*0.8); }
+function pDodge(){ var agi=S.equip.shoes?(S.equip.shoes.agi||0):0; return S.attrs.sf + qingLv() - 2 + agi; }
+function pDef(){ var d=S.equip.armor?(S.equip.armor.def||0):0; return Math.round(S.attrs.gg/3) + d; }
+function kfTotal(){ var t=0; for(var k in S.skills) t += S.skills[k].lv; return t; }
+function fameTitle(f){ var t=TITLES[0][1]; for(var i=0;i<TITLES.length;i++) if(f>=TITLES[i][0]) t=TITLES[i][1]; return t; }
+function needXl(lv){ return 100 + lv*30; }
+function expNeed(lv){ return 40 + lv*30; }
+function sectName(){ return S.sect ? SECTS[S.sect].name : "散人"; }
+function wealth(){ var w=S.silver; for(var i=0;i<S.listings.length;i++) w+=S.listings[i].price; return w; }
+function gainExp(n){
+  S.exp += n;
+  while(S.exp >= expNeed(S.level)){ S.exp -= expNeed(S.level); S.level++; pushNews("[系统] 你突破至 Lv."+S.level+"，江湖阅历渐长"); }
+}
+function addXl(id, n){
+  var s = sk(id); if(!s) return;
+  s.xl += n;
+  while(s.lv < 100 && s.xl >= needXl(s.lv)){
+    s.xl -= needXl(s.lv); s.lv++;
+    pushNews("[系统] 你的「"+skillName(id)+"」升至 "+s.lv+" 级");
+    gainExp(2 + s.lv*2);
+  }
+}
+function healTick(){ // 野外回血回蓝
+  if(S.battle) return;
+  if(S.hp < maxHp()) S.hp = Math.min(maxHp(), S.hp + 1);
+  if(S.mp < maxMp()) S.mp = Math.min(maxMp(), S.mp + 1);
+}
+
+/* ============ 日志 / 快讯 ============ */
+function pushNews(txt){ S.news.unshift(txt); if(S.news.length>40) S.news.length=40; }
+function pushWorld(txt){ S.worldLog.push({cls:"",txt:txt}); if(S.worldLog.length>80) S.worldLog.shift(); }
+function pushSect(txt){ S.sectLog.push({cls:"",txt:txt}); if(S.sectLog.length>60) S.sectLog.shift(); }
+function botKf(b){ var days=(Date.now()-S.epoch)/86400000; return b.kf + Math.floor(days*b.g); }
+function botFame(b){ var days=(Date.now()-S.epoch)/86400000; return b.fame + Math.floor(days*b.g*0.6); }
+function botWealth(b){ return b.we; }
+function genNews(){
+  var b1=pick(BOTS), b2=pick(BOTS), tpl=pick(NEWS_TPL);
+  var map={
+    a:b1.n, b:b2.n,
+    s:pick(BASIC_SKILLS).name, n:ri(20,80),
+    it:pick(["精钢刀","皮甲","快靴","铁剑","金创药"]),
+    p:pick([80,120,320,450]),
+    st:b1.s?SECTS[b1.s].name:"丐帮",
+    zone:pick(ZONES).name, m:pick(ZONES[Math.floor(Math.random()*2)].foes).name
+  };
+  var txt = tpl.replace(/\{(\w+)\}/g, function(_,k){ return map[k]||""; });
+  pushNews(txt);
+}
+
+/* ============ 战斗引擎 ============ */
+function makeFoe(def, scale){
+  var lv = def.lv;
+  return { name:def.name, lv:lv, hpMax:Math.round(def.hp*(scale||1)), hp:Math.round(def.hp*(scale||1)),
+    atk:5+lv*3, def:Math.round(lv*0.4), dodge:lv*1.5, hit:72+lv, skillName:pick(["劈风刀法","黑虎偷心","疯魔杖法","铁砂掌"]) };
+}
+function makePlayerUnit(){
+  return { name:S.name, hpMax:maxHp(), hp:S.hp, atk:pAtk(), def:pDef(), dodge:pDodge(), hit:pHIt() };
+}
+function foeHpBar(){ }
+function calcDmg(att, def, mult){
+  var v = att.atk * (mult||1) * rnd(0.85,1.15) - def.def;
+  v = Math.max(3, Math.round(v));
+  var crit = Math.random() < 0.05;
+  if(crit) v = Math.round(v*1.5);
+  return { v:v, crit:crit };
+}
+function tryDodge(defUnit, dodgeMult){
+  var d = defUnit.dodge * (dodgeMult||1);
+  return Math.random()*100 < d*0.8;
+}
+function blog(cls, txt){ S.battle.log.push({cls:cls, txt:txt}); if(S.battle.log.length>200) S.battle.log.shift(); }
+
+function playerAttack(kind, skillId){
+  var b = S.battle; if(!b || b.over) return;
+  var u = makePlayerUnit();
+  var mult = 1, label = "基本拳脚", sname = "基本招式";
+  var basics = { quan:sk("quan")?sk("quan").lv:0, dao:sk("dao")?sk("dao").lv:0, jian:sk("jian")?sk("jian").lv:0 };
+  if(kind==="skill" && skillId && sk(skillId)){
+    var s = sk(skillId);
+    mult = 1.3; label = skillName(skillId); sname = label;
+    u.atk = pAtk() + s.lv*1.5;
+    var cost = Math.round(8 + s.lv/5);
+    if(S.mp < cost){ blog("sys", "> 内力不足，「"+label+"」使不出来！"); return; }
+    S.mp -= cost;
+  } else {
+    var best = Math.max(basics.quan, basics.dao, basics.jian);
+    u.atk = pAtk() + best*0.8;
+    label = "基本拳脚";
+    for(var k in basics) if(basics[k]===best) label = skillName(k);
+  }
+  if(tryDodge(b.foe)){ blog("foe", "> 你一记「"+label+"」扑空，"+b.foe.name+"侧身避过。"); }
+  else{
+    var r = calcDmg(u, b.foe, mult);
+    b.foe.hp -= r.v;
+    var critTxt = r.crit ? "（会心一击！）" : "";
+    blog("you", "> 你"+(kind==="skill"?"运气于身，":"")+"一记「"+label+"」"+(r.crit?"正中要害！":"命中！")+"造成 <b>"+r.v+"</b> 点伤害"+critTxt);
+  }
+  if(b.foe.hp <= 0){ battleWin(); return; }
+  foeTurn();
+  syncBattle();
+}
+function foeTurn(){
+  var b = S.battle;
+  var u = makePlayerUnit();
+  var strong = Math.random() < 0.12;
+  if(b.dodgeBuff > 0){
+    b.dodgeBuff--;
+    if(tryDodge(u, 1.8)){ blog("foe", "> "+b.foe.name+"反扑而来，你施展轻功，堪堪避过。"); return; }
+  } else if(tryDodge(u)){ blog("foe", "> "+b.foe.name+"挥刀劈来，你身形一晃，堪堪避过。"); return; }
+  var r = calcDmg(b.foe, u, strong?1.5:1);
+  S.hp -= r.v;
+  blog("foe", "> "+b.foe.name+(strong?"暴起发难，一记狠招！":"反手一击，")+"你气血 <b>-"+r.v+"</b>"+(strong?"":"。"));
+  if(S.hp <= 0){ S.hp = 0; battleLose(); }
+}
+function battleWin(){
+  var b = S.battle; b.over = true; b.result = "win";
+  var lv = b.foe.lv;
+  var pot = 5 + lv*2, silver = 5 + lv*3, exp = 10 + lv*5;
+  S.pot += pot; S.silver += silver; gainExp(exp);
+  if(b.fameGain) S.fame += 1;
+  blog("sys", "════ 战斗胜利 ════　潜能 +"+pot+" · 银两 +"+silver+" · 经验 +"+exp+(b.fameGain?" · 声望 +1":""));
+  pushNews("[系统] 你在"+b.zoneName+"击败「"+b.foe.name+"」");
+  S.hp = Math.max(1, S.hp);
+}
+function battleLose(){
+  var b = S.battle; b.over = true; b.result = "lose";
+  S.hp = Math.max(1, Math.round(maxHp()*0.3));
+  var lost = Math.min(S.silver, Math.round(S.silver*0.1));
+  S.silver -= lost;
+  blog("sys", "════ 不敌昏迷 ════　被路过的货郎救回城中 · 银两散落 "+lost+" 文（装备无损）");
+}
+function fleeBattle(){
+  var b = S.battle; if(!b || b.over) return;
+  if(Math.random() < 0.4 + pDodge()*0.005){
+    b.over = true; b.result = "flee";
+    blog("sys", "════ 逃跑成功 ════　你脚底抹油，脱离了战斗");
+  } else {
+    blog("foe", "> 你转身想跑，被"+b.foe.name+"拦了回来！");
+    foeTurn();
+  }
+  syncBattle();
+}
+function autoBattle(){
+  var b = S.battle; if(!b || b.over) return;
+  blog("sys", "> 【自动演算】你凝神静气，招式连绵而出——");
+  var guard = 0;
+  while(!b.over && guard < 120){
+    guard++;
+    var sectIds = [];
+    for(var k in S.skills) if(k.indexOf("_")>0 && S.skills[k].lv>0) sectIds.push(k);
+    if(sectIds.length && S.mp > 15 && Math.random()<0.6) playerAttack("skill", pick(sectIds));
+    else playerAttack("basic");
+  }
+  if(!b.over){ b.over = true; b.result = "flee"; blog("sys","════ 久战不下，各自罢手 ════"); }
+  syncBattle();
+}
+
+/* ============ 切磋（PvP 演算） ============ */
+function duelBot(botName, silent){
+  var b = null;
+  for(var i=0;i<BOTS.length;i++) if(BOTS[i].n===botName) b = BOTS[i];
+  if(!b) return null;
+  var me = makePlayerUnit(); me.atk = pAtk() + kfTotal()*0.35;
+  var foeKf = botKf(b);
+  var foe = { name:b.n, hpMax:100+foeKf*10, hp:100+foeKf*10, atk:16+foeKf*1.1, def:Math.round(foeKf*0.25), dodge:foeKf*0.22, hit:85 };
+  var log = [];
+  log.push({cls:"sys", txt:"» 你与「"+b.n+"」登上擂台，抱拳行礼。"});
+  var turn = 1, guard = 0;
+  while(me.hp > 0 && foe.hp > 0 && guard < 60){
+    guard++;
+    if(tryDodge(foe)) log.push({cls:"foe", txt:"» 第 "+turn+" 回合：「"+b.n+"」的身法让你无从下手。"});
+    else{
+      var r1 = calcDmg(me, foe, 1.25);
+      foe.hp -= r1.v;
+      log.push({cls:"you", txt:"» 第 "+turn+" 回合：你「"+(pick(knownSkillNames())||"基本拳脚")+"」抢先出手，造成 "+r1.v+" 点伤害。"});
+    }
+    if(foe.hp <= 0) break;
+    if(tryDodge(me)) log.push({cls:"foe", txt:"» 第 "+turn+" 回合：「"+b.n+"」闪过你的攻势，回手一记，你堪堪挡下。"});
+    else{
+      var r2 = calcDmg(foe, me, 1);
+      me.hp -= r2.v;
+      log.push({cls:"foe", txt:"» 第 "+turn+" 回合：「"+b.n+"」一记「"+botSkillName(b)+"」扫来，你气血 -"+r2.v+"。"});
+    }
+    turn++;
+  }
+  var win = foe.hp <= 0;
+  log.push({cls:"sys", txt: win ? "════ 切磋获胜 ════　声望 +2 · 战报已发至世界频道"
+                                : "════ 切磋落败 ════　「"+b.n+"」抱拳：阁下好功夫，来日再战"});
+  return { win:win, log:log, bot:b };
+}
+function botSkillName(b){
+  var names = { shaolin:["罗汉拳","少林长拳","拈花指"], wudang:["武当绵掌","太极剑"], huashan:["华山剑法","狂风快剑"], emei:["回风拂柳剑","飘雪穿云掌"], gaibang:["打狗棒法","太祖长拳"], mojiao:["幽冥爪","摄魂大法"] };
+  var arr = names[b.s] || ["基本拳脚"];
+  return pick(arr);
+}
+function knownSkillNames(){
+  var out = ["基本拳脚"];
+  for(var k in S.skills) if(k.indexOf("_")>0 && S.skills[k].lv>0) out.push(skillName(k));
+  return out;
+}
+
+/* ============ 挂机 / 打工 结算 ============ */
+function idleStart(kind, key){
+  if(S.idle) return;
+  S.idle = { kind:kind, key:key, startTs:Date.now(), capMs:1800000 };
+  var name = kind==="train" ? skillName(key) : jobById(key).name;
+  pushNews("[系统] 你开始"+(kind==="train"?"挂机修炼「"+name+"」":"打工："+name)+"（上限 30 分钟）");
+  save(); render();
+}
+function idleStop(){
+  if(!S.idle) return;
+  settleIdle(true);
+  S.idle = null; save(); render();
+}
+function idleElapsed(){ return Math.min(Date.now()-S.idle.startTs, S.idle.capMs); }
+function settleIdle(notify){
+  var id = S.idle, ms = idleElapsed(), sec = ms/1000;
+  if(id.kind === "train"){
+    var gain = Math.round(sec/60 * 13 * (1 + S.attrs.wx/200));
+    if(gain > 0){ addXl(id.key, gain); if(notify) pushNews("[系统] 收功：「"+skillName(id.key)+"」修为 +"+gain); }
+  } else {
+    var job = jobById(id.key), rounds = Math.floor(sec/10);
+    if(rounds > 0){
+      var earned = 0, ambushes = 0, logTxt = [];
+      for(var i=0;i<rounds;i++){
+        if(job.id==="biao" && Math.random()<0.12){ ambushes++; continue; }
+        earned += job.pay;
+      }
+      var lost = 0;
+      for(var j=0;j<ambushes;j++){
+        var r = duelPower() > 30+ri(0,40);
+        if(r){ earned += job.pay*2; S.workLog.unshift({cls:"foe", txt:"[遇袭] 押镖遇山贼！你三拳两脚打发掉，反搜了点盘缠：+"+job.pay*2+" 文"}); }
+        else { lost += Math.round(earned*0.2); S.workLog.unshift({cls:"foe", txt:"[遇袭] 押镖遇山贼，破财免灾：-"+Math.round(earned*0.2)+" 文"}); earned -= Math.round(earned*0.2); }
+      }
+      earned = Math.max(0, earned);
+      S.silver += earned;
+      if(job.id==="chai") addXl("dao", rounds*5);
+      if(Math.random() < 0.03*Math.max(1,rounds/3)){
+        S.items.quanpu = (S.items.quanpu||0)+1;
+        S.workLog.unshift({cls:"qy", txt:"[奇遇] "+(job.id==="pao"?"跑堂时":"做工时")+"拾获《拳谱残页》×1（属性页可使用）"});
+      }
+      if(notify) pushNews("[系统] 收工："+job.name+" ×"+rounds+" 轮，进账 "+earned+" 文"+(job.id==="chai"?" · 刀法修为 +"+rounds*5:""));
+      if(S.workLog.length>30) S.workLog.length=30;
+    }
+  }
+}
+function duelPower(){ return pAtk()*2 + maxHp()/4 + kfTotal(); }
+function jobById(id){ for(var i=0;i<JOBS.length;i++) if(JOBS[i].id===id) return JOBS[i]; return null; }
+function jobMet(job){
+  if(!job.req) return true;
+  if(job.req.attr) return S.attrs[job.req.attr] >= job.req.v;
+  if(job.req.skill){ var s=sk(job.req.skill); return s && s.lv >= job.req.v; }
+  return false;
+}
+
+/* ============ 每日重置 ============ */
+function checkDaily(){
+  var t = today();
+  if(S.daily.date !== t){ S.daily = { date:t, duels:0, quest:false, master:false }; }
+}
+
+/* ============ 屏幕渲染 ============ */
+function tbarTitle(){
+  var map = { login:"bash", create:"角色创建", hall:"江湖大厅 — 扬州城", stats:"角色属性", master:"拜师学艺", train:"练功修炼", work:"打工赚钱", market:"扬州集市", battle:"江湖历练", pvp:"扬州擂台 · 切磋", chat:"江湖频道", rank:"群侠排行榜" };
+  return "jianghu@office-pc:~/moyu — " + (map[SCR]||SCR) + " — 132×41";
+}
+function go(scr){
+  SCR = scr;
+  if(S){ S.screen = scr; save(); }
+  render();
+}
+function render(){
+  if(el("tbarTtl")) el("tbarTtl").textContent = tbarTitle();
+  var body = el("sbody");
+  if(SCR==="login"){ body.innerHTML = htmlLogin(); return; }
+  if(SCR==="create"){ body.innerHTML = htmlCreate(); return; }
+  if(!S){ SCR="login"; body.innerHTML = htmlLogin(); return; }
+  switch(SCR){
+    case "hall":   body.innerHTML = htmlHall(); break;
+    case "stats":  body.innerHTML = htmlStats(); break;
+    case "master": body.innerHTML = htmlMaster(); break;
+    case "train":  body.innerHTML = htmlTrain(); break;
+    case "work":   body.innerHTML = htmlWork(); break;
+    case "market": body.innerHTML = htmlMarket(); break;
+    case "battle": body.innerHTML = htmlBattle(); break;
+    case "pvp":    body.innerHTML = htmlPvp(); break;
+    case "chat":   body.innerHTML = htmlChat(); break;
+    case "rank":   body.innerHTML = htmlRank(); break;
+    default: SCR="hall"; body.innerHTML = htmlHall();
+  }
+}
+
+/* ---- 01 登录 ---- */
+function htmlLogin(){
+  var accts = accountNames();
+  var last = null;
+  try{ last = localStorage.getItem("moyu_cur"); }catch(e){}
+  if(!last && accts.length) last = accts[0];
+  var newsLine = (S && S.news.length) ? S.news[0] : "[快讯] 「令狐冲不冲」在擂台击败「隔壁老王」，升至声望榜第 3 位";
+  return '<div style="margin:auto;width:640px;max-width:94%;">'
+    + '<div style="text-align:center;margin-bottom:8px;font-size:15px;color:var(--faint);letter-spacing:6px;">┌─────────────────┐</div>'
+    + '<div style="text-align:center;font-size:40px;font-weight:700;letter-spacing:14px;color:var(--green);">摸 鱼 江 湖</div>'
+    + '<div style="text-align:center;margin:10px 0 30px;font-size:13px;color:var(--dim);letter-spacing:2px;">英雄坛说 · 多人在线版 —— 大隐隐于工位</div>'
+    + '<div class="panel">'
+    + '<div class="ptitle"><b>$</b> jianghu --login　登录江湖</div>'
+    + '<div class="field"><label>大侠名号</label><input id="loginName" value="'+esc(last||"")+'" maxlength="12"></div>'
+    + '<div class="field"><label>江湖口令</label><input id="loginPass" type="password"></div>'
+    + '<div style="display:flex;gap:14px;margin-top:20px;">'
+    + '<button class="btn solid" onclick="doLogin()">进入江湖</button>'
+    + '<button class="btn dim-btn" onclick="goRegister()">初来乍到 · 注册</button>'
+    + (accts.length ? '<button class="btn dim-btn" style="margin-left:auto;" onclick="logout()">切换账号</button>' : '')
+    + '</div></div>'
+    + '<p class="hint-line" style="margin-top:20px;">· 存档保存在本机浏览器（'+(accts.length?accts.length:0)+' 位大侠在此闯荡），换电脑可用「导出存档」'
+    + '<button class="btn dim-btn" style="padding:2px 10px;font-size:12px;margin-left:8px;" onclick="exportSave()">导出存档</button>'
+    + '<button class="btn dim-btn" style="padding:2px 10px;font-size:12px;" onclick="importSave()">导入</button></p>'
+    + '<p class="hint-line">· 全程无声音、无弹窗，终端界面伪装，<span class="kbd">`</span> 键一键老板伪装　· <span class="kbd">Enter</span> 进入</p>'
+    + '<p style="margin-top:18px;font-size:13px;color:var(--cyan);">'+esc(newsLine)+'</p>'
+    + '</div>';
+}
+function doLogin(){
+  var name = el("loginName").value.trim(), pass = el("loginPass").value;
+  if(!name){ return; }
+  var acct = loadAccount(name);
+  if(!acct){ toastHint("查无此人，先点「初来乍到 · 注册」"); return; }
+  if(acct.pass && acct.pass !== pass){ toastHint("口令不对，再想想"); return; }
+  S = acct;
+  checkDaily();
+  // 离线收功
+  if(S.idle){ settleIdle(true); S.idle = null; }
+  if(!S.hp) S.hp = maxHp();
+  if(!S.mp) S.mp = maxMp();
+  S.hp = Math.min(S.hp, maxHp()); S.mp = Math.min(S.mp, maxMp());
+  SCR = (S.screen && S.screen!=="login" && S.screen!=="create") ? S.screen : "hall";
+  pushNews("[系统] 大侠「"+S.name+"」进入江湖");
+  save(); render();
+}
+function logout(){ try{ localStorage.removeItem("moyu_cur"); }catch(e){} S=null; SCR="login"; render(); }
+function goRegister(){ regRoll = { attrs: rollAttrs(), reroll: 1 }; SCR="create"; render(); }
+function exportSave(){
+  var names = accountNames(); if(!names.length){ toastHint("还没有存档"); return; }
+  var dump = {};
+  for(var i=0;i<names.length;i++) dump[names[i]] = loadAccount(names[i]);
+  var blob = new Blob([JSON.stringify(dump)], {type:"application/json"});
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "moyu-jianghu-save.json"; a.click();
+}
+function importSave(){
+  var inp = document.createElement("input"); inp.type="file"; inp.accept=".json";
+  inp.onchange = function(){
+    var f = inp.files[0]; if(!f) return;
+    var r = new FileReader();
+    r.onload = function(){
+      try{
+        var dump = JSON.parse(r.result); var n=0;
+        for(var k in dump){ if(dump[k] && dump[k].name){ localStorage.setItem(accountKey(k), JSON.stringify(dump[k])); n++; } }
+        toastHint("导入成功："+n+" 位大侠"); render();
+      }catch(e){ toastHint("文件格式不对"); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+function toastHint(txt){
+  var d = document.createElement("div");
+  d.textContent = txt;
+  d.style.cssText = "position:fixed;left:50%;bottom:60px;transform:translateX(-50%);background:#132016;border:1px solid #2a4a35;color:#3ddc84;padding:8px 18px;border-radius:6px;font-size:13px;z-index:2000;";
+  document.body.appendChild(d);
+  setTimeout(function(){ d.remove(); }, 2200);
+}
+
+/* ---- 02 创建角色 ---- */
+function attrGrade(t){ return t>=100?"万中无一":(t>=85?"天资聪颖":(t>=70?"中人之姿":"凡夫俗子")); }
+function htmlCreate(){
+  var a = regRoll.attrs, total = a.tl+a.sf+a.wx+a.gg;
+  function bar(v){ return Math.round((v-10)/20*100); }
+  function row(k, hint){
+    return '<div class="attr-row"><span class="an">'+ATTR_KEY[k]+'</span><span class="av">'+a[k]+'</span><div class="bar"><i style="width:'+bar(a[k])+'%"></i></div><span class="ah">'+hint+'</span></div>';
+  }
+  return '<div style="margin:auto;width:760px;max-width:96%;">'
+    + '<div class="panel">'
+    + '<div class="ptitle"><b>$</b> jianghu roll —— 天赋随机 · 每项 10~30</div>'
+    + row("tl","决定攻击伤害")+row("sf","闪避与先手")+row("wx","练功效率加成")+row("gg","气血上限")
+    + '<div style="display:flex;align-items:center;gap:16px;margin-top:18px;padding-top:12px;border-top:1px dashed var(--border);">'
+    + '<span style="font-size:14px;color:var(--dim);">天赋总评</span>'
+    + '<span class="amber" style="font-size:16px;font-weight:700;">'+attrGrade(total)+'</span>'
+    + '<span style="font-size:13px;color:var(--faint);">（总分 '+total+' · 万中无一 ≥ 100）</span></div>'
+    + '</div>'
+    + '<div class="field" style="margin-top:22px;"><label>大侠名号</label><input id="createName" placeholder="行走江湖的名号（2~12 字）" maxlength="12"></div>'
+    + '<div style="display:flex;gap:14px;margin-top:10px;justify-content:center;">'
+    + '<button class="btn dim-btn" '+(regRoll.reroll<=0?"disabled":"")+' onclick="reroll()">重新掷骰 · 剩余 '+regRoll.reroll+' 次</button>'
+    + '<button class="btn solid" onclick="createChar()">就这个了 · 闯江湖</button>'
+    + '<button class="btn dim-btn" onclick="SCR=\'login\';render()">返回登录</button>'
+    + '</div>'
+    + '<p class="hint-line" style="margin-top:18px;text-align:center;">· 属性终身生效，重掷机会仅 1 次，掷出高天赋可少奋斗十年</p>'
+    + '</div>';
+}
+function reroll(){ if(regRoll.reroll>0){ regRoll.reroll--; regRoll.attrs = rollAttrs(); render(); } }
+function createChar(){
+  var name = el("createName").value.trim();
+  if(name.length<2){ toastHint("名号至少 2 个字"); return; }
+  if(loadAccount(name)){ toastHint("江湖上已有这位大侠，换个名号"); return; }
+  S = newState(name, "", regRoll.attrs);
+  S.hp = maxHp(); S.mp = maxMp();
+  pushNews("[快讯] 新大侠「"+name+"」踏入江湖，天赋"+attrGrade(S.attrs.tl+S.attrs.sf+S.attrs.wx+S.attrs.gg));
+  pushNews("[系统] 欢迎来到摸鱼江湖！先去「拜师」或「练功」，打工赚银两，出城打怪攒潜能。按 ` 键随时老板伪装。");
+  save(); SCR="hall"; render();
+}
+
+/* ---- 03 江湖大厅 ---- */
+function htmlHall(){
+  var strip = hallStripHtml();
+  var news = S.news.slice(0,12).map(function(n){
+    var cls = n.indexOf("[奇遇]")>=0 ? "qy" : (n.indexOf("[系统]")>=0 ? "" : "sys");
+    return '<p class="'+cls+'">'+esc(n)+'</p>';
+  }).join("") || '<p class="faint">暂无快讯</p>';
+  var hang = hangBarHtml();
+  return strip
+    + '<div class="two-col">'
+    + '<div class="col"><div class="panel grow">'
+    + '<div class="ptitle"><b>$</b> jianghu menu —— 行动菜单（输入数字回车执行）</div>'
+    + '<div class="menu-grid">'
+    + menuItem(1,"stats","属性","查看角色 · 武功 · 装备")
+    + menuItem(2,"master","拜师","门派学艺 · 习武条件")
+    + menuItem(3,"train","练功","修炼武功 · 打坐挂机")
+    + menuItem(4,"work","打工","客栈跑堂 · 赚取银两")
+    + menuItem(5,"market","集市","买卖装备 · 玩家摆摊")
+    + menuItem(6,"battle","出城","江湖历练 · 野外遭遇")
+    + menuItem(7,"pvp","擂台","切磋比武 · 每日 10 次")
+    + menuItem(8,"chat","江湖","世界频道 · 门派频道")
+    + menuItem(9,"rank","排行","群侠榜 · 财富 · 声望")
+    + '<a class="menu-item" onclick="toggleBoss()"><span class="no">`</span><span><span class="mt">伪装</span><div class="ms">一键切换工作报表</div></span></a>'
+    + '</div></div></div>'
+    + '<div class="col"><div class="panel grow" style="display:flex;flex-direction:column;">'
+    + '<div class="ptitle"><b>$</b> 江湖快讯 —— 全服实时</div>'
+    + '<div class="log" id="newsBox" style="border:none;background:transparent;padding:0;">'+news+'</div>'
+    + '<p style="margin:10px 0 0;font-size:13px;color:var(--faint);border-top:1px dashed var(--border);padding-top:8px;">当前在线：<span class="grn" id="onlineTxt">'+S.online+'</span> 位大侠 · 你所在的扬州城有 <span class="grn" id="cityTxt">'+Math.max(3,Math.round(S.online/7))+'</span> 人</p>'
+    + '</div></div>'
+    + '</div>'
+    + (hang ? '<div style="margin-top:14px;" id="hangBarBox">'+hang+'</div>' : '')
+    + '<div class="cmdline"><span class="grn">$</span><span>jianghu&gt;</span>'
+    + '<input id="cmdInput" style="flex:1;background:transparent;border:none;outline:none;color:var(--green);font-family:inherit;font-size:14px;" onkeydown="if(event.key===\'Enter\'){cmdRun(this.value);this.value=\'\';}">'
+    + '<span style="font-size:12px;">输入 1~9 执行 · <span class="kbd">`</span> 老板键 · 已自动存档</span></div>';
+}
+function menuItem(no, target, t, s){
+  return '<a class="menu-item" onclick="go(\''+target+'\')"><span class="no">'+no+'</span><span><span class="mt">'+t+'</span><div class="ms">'+s+'</div></span></a>';
+}
+function hallStripHtml(){
+  return '<div class="stat-strip" id="statStrip" style="margin-bottom:16px;">'
+    + '<span><b>'+esc(S.name)+'</b> Lv.'+S.level+' · '+sectName()+(S.sect?"弟子":"")+'</span>'
+    + '<span>气血 <b>'+S.hp+'</b>/'+maxHp()+'</span>'
+    + '<span>内力 <b>'+S.mp+'</b>/'+maxMp()+'</span>'
+    + '<span class="amber">银两 '+fmt(S.silver)+' 文</span>'
+    + '<span class="cyan">潜能 '+S.pot+'</span>'
+    + '<span>声望 '+S.fame+' · <span class="dim">'+fameTitle(S.fame)+'</span></span>'
+    + '<span style="margin-left:auto;"><span class="kbd">`</span> 老板键伪装</span>'
+    + '</div>';
+}
+function hangBarHtml(){
+  if(!S.idle) return "";
+  var ms = idleElapsed(), left = Math.max(0, (S.idle.capMs-ms)/1000);
+  var label = S.idle.kind==="train" ? "修炼 · "+skillName(S.idle.key) : "打工 · "+jobById(S.idle.key).name;
+  var earned;
+  if(S.idle.kind==="train"){ earned = "预计修为 <span class='grn'>+"+Math.round(ms/60000*13*(1+S.attrs.wx/200))+"</span>"; }
+  else { var rounds=Math.floor(ms/10000); var job=jobById(S.idle.key); earned = "已赚 <span class='amber'>"+(rounds*job.pay)+" 文</span>"; }
+  return '<div class="hang-bar">'
+    + '<span class="spin">⚙ '+(S.idle.kind==="train"?"修炼中":"打工中")+'</span>'
+    + '<span>'+label+'</span>'
+    + '<span>已挂 <span class="grn">'+mmss(ms/1000)+'</span></span>'
+    + '<span>'+earned+'</span>'
+    + '<span>剩余 <span class="grn">'+mmss(left)+'</span>（单次上限 30 分钟）</span>'
+    + '<button class="btn dim-btn" style="margin-left:auto;padding:4px 14px;font-size:13px;" onclick="idleStop()">收功 / 停止</button>'
+    + '</div>';
+}
+function cmdRun(v){
+  v = (v||"").trim();
+  var map = { "1":"stats","2":"master","3":"train","4":"work","5":"market","6":"battle","7":"pvp","8":"chat","9":"rank" };
+  if(map[v]){ go(map[v]); return; }
+  if(v==="help"||v==="?"){ toastHint("输入 1~9 打开菜单；` 老板伪装；Esc 返回大厅"); return; }
+  if(v){ toastHint("未知指令： "+esc(v)); }
+}
+
+/* ---- 05 角色属性 ---- */
+function equipDesc(e){
+  if(!e) return "（空）";
+  if(e.atk) return e.name+"（攻 +"+e.atk+"）";
+  if(e.def) return e.name+"（防 +"+e.def+"）";
+  return e.name+(e.agi?"（身法 +"+e.agi+"）":"");
+}
+function htmlStats(){
+  function bar(v){ return Math.round((v-10)/20*100); }
+  var rows = "";
+  ["tl","sf","wx","gg"].forEach(function(k){
+    rows += '<div class="attr-row"><span class="an">'+ATTR_KEY[k]+'</span><span class="av">'+S.attrs[k]+'</span><div class="bar"><i style="width:'+bar(S.attrs[k])+'%"></i></div></div>';
+  });
+  var kfRows = "";
+  var ids = Object.keys(S.skills);
+  ids.forEach(function(id){
+    var s = S.skills[id];
+    if(s.lv<=0 && s.xl<=0) return;
+    var isSect = id.indexOf("_")>0;
+    var pct = Math.min(100, Math.round(s.xl/needXl(s.lv)*100));
+    kfRows += '<tr'+(isSect?' class="hl"':'')+'><td>'+skillName(id)+'</td><td class="num">'+(isSect?"门派·"+sectName():"基本")+'</td><td>'+s.lv+' 级</td>'
+      + '<td><div class="bar" style="max-width:180px;"><i style="width:'+pct+'%"></i></div><span class="dim" style="font-size:12px;margin-left:8px;">'+s.xl+'/'+needXl(s.lv)+'</span></td></tr>';
+  });
+  var bagRows = "";
+  S.bag.forEach(function(e){
+    bagRows += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13.5px;">'
+      + '<span style="flex:1;color:#bfe3c9;">['+EQUIP_KIND_NAME[e.kind]+'] '+equipDesc(e)+'</span>'
+      + '<button class="btn" style="padding:2px 12px;font-size:12px;" onclick="equipBag('+e.uid+')">装备</button>'
+      + '<button class="btn dim-btn" style="padding:2px 12px;font-size:12px;" onclick="quickSell('+e.uid+')">半价卖店</button>'
+      + '</div>';
+  });
+  return '<div class="stat-strip" style="margin-bottom:14px;">'
+    + '<span><b>'+esc(S.name)+'</b> Lv.'+S.level+' · '+sectName()+(S.sect?"弟子":"")+'</span>'
+    + '<span>声望 '+S.fame+' · '+fameTitle(S.fame)+'</span>'
+    + '<span class="dim">经验 '+S.exp+'/'+expNeed(S.level)+'</span>'
+    + '<button class="btn dim-btn" style="margin-left:auto;padding:4px 14px;font-size:13px;" onclick="go(\'hall\')">返回大厅（Esc）</button>'
+    + '</div>'
+    + '<div class="two-col even">'
+    + '<div class="col">'
+    + '<div class="panel"><div class="ptitle"><b>$</b> 四维属性</div>'+rows
+    + '<p class="hint-line" id="statsHpLine" style="margin-top:8px;">气血上限 '+maxHp()+'（当前 '+S.hp+'） · 内力上限 '+maxMp()+'（当前 '+S.mp+'）<br>命中 '+pHIt()+' · 闪避 '+pDodge()+' · 攻击 '+pAtk()+' · 防御 '+pDef()+'</p></div>'
+    + '<div class="panel"><div class="ptitle"><b>$</b> 装备栏</div>'
+    + '<p style="font-size:14px;line-height:2;color:#bfe3c9;">武器：'+equipDesc(S.equip.weapon)+'<br>防具：'+equipDesc(S.equip.armor)+'<br>鞋子：'+equipDesc(S.equip.shoes)+'</p>'
+    + (S.bag.length ? '<div style="border-top:1px dashed var(--border);padding-top:10px;margin-top:6px;"><div class="ptitle" style="margin:0 0 8px;"><b>$</b> 背包</div>'+bagRows+'</div>' : '<p class="hint-line">背包空空如也</p>')
+    + '</div>'
+    + '<div class="panel"><div class="ptitle"><b>$</b> 随身物品</div>'
+    + '<div style="font-size:14px;line-height:2.2;color:#bfe3c9;">金创药 ×'+(S.items.jinchuang||0)+'（回复 50 气血）<button class="btn" style="padding:1px 12px;font-size:12px;" onclick="useItem(\'jinchuang\')">使用</button><br>'
+    + '拳谱残页 ×'+(S.items.quanpu||0)+'（随机武功修为 +100）'+(S.items.quanpu>0?'<button class="btn" style="padding:1px 12px;font-size:12px;" onclick="useItem(\'quanpu\')">研读</button>':'')+'</div></div>'
+    + '</div>'
+    + '<div class="col"><div class="panel grow">'
+    + '<div class="ptitle"><b>$</b> 武功列表 —— 总等级 '+kfTotal()+' · 修炼进度如下</div>'
+    + '<table class="tt"><tr><th>武功</th><th>类型</th><th>等级</th><th>修为进度</th></tr>'+kfRows+'</table>'
+    + '<p class="hint-line" style="margin-top:12px;">· 武功等级上限 100 级 · 门派武功需拜师后跟师父学习<br>· 修为靠「练功」获得，潜能与悟性决定效率</p>'
+    + '</div></div>'
+    + '</div>';
+}
+function equipBag(uid){
+  for(var i=0;i<S.bag.length;i++){
+    if(S.bag[i].uid===uid){
+      var e = S.bag[i], old = S.equip[e.kind];
+      S.equip[e.kind] = e; S.bag.splice(i,1);
+      if(old) S.bag.push(old);
+      break;
+    }
+  }
+  save(); render();
+}
+function quickSell(uid){
+  for(var i=0;i<S.bag.length;i++){
+    if(S.bag[i].uid===uid){
+      var e = S.bag[i];
+      var fair = e.atk?e.atk*25:(e.def?e.def*20:(e.agi||0)*25+20);
+      var gain = Math.max(5, Math.round(fair/2));
+      S.silver += gain; S.bag.splice(i,1);
+      toastHint("卖给杂货铺：+"+gain+" 文");
+      break;
+    }
+  }
+  save(); render();
+}
+function useItem(key){
+  if(key==="jinchuang"){
+    if((S.items.jinchuang||0)<=0) return;
+    if(S.hp>=maxHp()){ toastHint("气血已满"); return; }
+    S.items.jinchuang--; S.hp = Math.min(maxHp(), S.hp+50);
+    toastHint("服下金创药，气血 +50");
+  } else if(key==="quanpu"){
+    if((S.items.quanpu||0)<=0) return;
+    S.items.quanpu--;
+    var learned = Object.keys(S.skills).filter(function(id){ return S.skills[id].lv>0; });
+    var id = pick(learned);
+    addXl(id, 100);
+    toastHint("研读残页：「"+skillName(id)+"」修为 +100");
+  }
+  save(); render();
+}
+
+/* ---- 06 拜师学艺 ---- */
+function sectStatus(id){
+  var sect = SECTS[id];
+  if(S.sect===id) return '<span class="grn">已入门</span>';
+  if(!sect.req) return '<span class="cyan">可入</span>';
+  if(sect.req.attr) return S.attrs[sect.req.attr]>=sect.req.v ? '<span class="cyan">已达 · 未拜</span>' : '<span class="dim">未达</span>';
+  if(sect.req.fame) return S.fame>=sect.req.fame ? '<span class="cyan">已达 · 未拜</span>' : '<span class="dim">未达</span>';
+  return '<span class="cyan">可入</span>';
+}
+function skillReqMet(rq){
+  if(!rq) return true;
+  if(rq.skill){ var s=sk(rq.skill); return s && s.lv>=rq.v; }
+  if(rq.attr) return S.attrs[rq.attr]>=rq.v;
+  if(rq.fame) return S.fame>=rq.fame;
+  return false;
+}
+function htmlMaster(){
+  var sectRows = "";
+  Object.keys(SECTS).forEach(function(id){
+    var sect = SECTS[id];
+    sectRows += '<tr'+(S.sect===id?' class="hl"':'')+'><td>'+sect.name+'</td><td class="num">'+sect.reqDesc+'</td><td>'+sectStatus(id)+'</td>'
+      + '<td>'+(S.sect===id ? '<span class="dim" style="font-size:13px;">当前门派</span>' : '<button class="btn" style="padding:3px 12px;font-size:13px;" onclick="joinSect(\''+id+'\')">拜师</button>')+'</td></tr>';
+  });
+  var rightHtml = "";
+  if(S.sect){
+    var sect = SECTS[S.sect];
+    var teachRows = "";
+    SECT_SKILLS[S.sect].forEach(function(td){
+      var s = sk(td.id);
+      var met = skillReqMet(td.req);
+      var afford = S.pot>=td.cost.pot && S.silver>=td.cost.silver;
+      var action;
+      if(s && s.lv>0) action = '<span class="dim" style="font-size:13px;">已学会 '+s.lv+' 级</span>';
+      else action = '<button class="btn" style="padding:3px 12px;font-size:13px;" '+(met&&afford?"":"disabled")+' onclick="learnSkill(\''+td.id+'\')">学习</button>';
+      teachRows += '<tr><td>'+td.name+'</td><td class="num">'+td.reqDesc+(met?"":"（未达）")+'</td><td class="num">潜能 '+td.cost.pot+' · 银两 '+td.cost.silver+' 文</td><td>'+action+'</td></tr>';
+    });
+    rightHtml = '<div class="panel grow"><div class="ptitle"><b>$</b> 当前师父：'+sect.name+' · '+sect.master+' —— 传功列表</div>'
+      + '<table class="tt"><tr><th>武功</th><th>要 求</th><th>消 耗</th><th></th></tr>'+teachRows+'</table>'
+      + '<p class="hint-line" style="margin-top:12px;">· 当前潜能 <span class="cyan">'+S.pot+'</span> · 银两 <span class="amber">'+fmt(S.silver)+' 文</span><br>· 门派武功等级同样上限 100 级，修炼方式与基本武功一致</p></div>'
+      + '<div class="panel"><div class="ptitle"><b>$</b> 师门福利</div>'
+      + '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">'
+      + '<button class="btn" '+(S.daily.quest?"disabled":"")+' onclick="doQuest()">'+(S.daily.quest?"今日门派任务已完成":"领取门派任务（潜能+10 · 银两+20）")+'</button>'
+      + '<button class="btn" '+(canChallengeMaster()?"":"disabled")+' onclick="challengeMaster()">'+(S.daily.master?"今日已挑战掌门":"挑战掌门（门派武功≥50 · 胜则声望+50）")+'</button>'
+      + '<button class="btn dim-btn" onclick="betraySect()">叛出师门</button>'
+      + '</div>'
+      + '<p class="hint-line" style="margin-top:10px;">· 门派频道：与同门畅聊江湖（见「江湖」频道）<br>· 叛出师门：声望减半，门派武功尽数遗忘，慎之慎之</p></div>';
+  } else {
+    rightHtml = '<div class="panel grow" style="display:flex;align-items:center;justify-content:center;">'
+      + '<div style="text-align:center;"><p class="faint" style="font-size:15px;line-height:2.4;">你尚未拜师，江湖人称「散人」。<br>左侧选择门派拜师后，可跟师父学习门派武功。<br>散人也可修炼基本武功，只是武功平平，行走江湖吃力。</p></div></div>';
+  }
+  return '<div class="two-col even">'
+    + '<div class="col"><div class="panel grow"><div class="ptitle"><b>$</b> 六大门派 —— 拜师条件</div>'
+    + '<table class="tt"><tr><th>门派</th><th>条件</th><th>状态</th><th></th></tr>'+sectRows+'</table>'
+    + '<p class="hint-line" style="margin-top:12px;">· 同一时间只能拜一个门派<br>· 叛出师门：声望减半，门派武功尽数遗忘<br>· 散人不拜师，也可修炼基本武功</p></div></div>'
+    + '<div class="col">'+rightHtml+'</div>'
+    + '</div>'
+    + '<div class="cmdline"><button class="btn dim-btn" style="padding:4px 14px;font-size:13px;" onclick="go(\'hall\')">← 返回大厅（Esc）</button><span style="margin-left:auto;font-size:12px;" class="dim">潜能与银两不足以拜师学艺时，先去打工</span></div>';
+}
+function joinSect(id){
+  if(S.sect){ toastHint("已在 "+SECTS[S.sect].name+" 门下，叛门后方可再拜"); return; }
+  var sect = SECTS[id];
+  if(!skillReqMet(sect.req)){ toastHint("条件未达："+sect.reqDesc); return; }
+  S.sect = id;
+  pushNews("[快讯] 「"+S.name+"」拜入"+sect.name+"门下，成为"+sect.master+"的弟子");
+  save(); render();
+}
+function learnSkill(id){
+  var td = null;
+  SECT_SKILLS[S.sect].forEach(function(t){ if(t.id===id) td=t; });
+  if(!td) return;
+  if(!skillReqMet(td.req)){ toastHint("条件未达："+td.reqDesc); return; }
+  if(S.pot<td.cost.pot || S.silver<td.cost.silver){ toastHint("潜能或银两不足"); return; }
+  S.pot -= td.cost.pot; S.silver -= td.cost.silver;
+  S.skills[id] = newSkill(1);
+  pushNews("[系统] 你学会了「"+td.name+"」！去「练功」修炼吧");
+  save(); render();
+}
+function doQuest(){
+  if(S.daily.quest || !S.sect) return;
+  S.daily.quest = true;
+  S.pot += 10; S.silver += 20; gainExp(15);
+  toastHint("替师父跑腿归来：潜能 +10 · 银两 +20 · 经验 +15");
+  save(); render();
+}
+function canChallengeMaster(){
+  if(!S.sect) return false;
+  var ok = false;
+  SECT_SKILLS[S.sect].forEach(function(t){ var s=sk(t.id); if(s && s.lv>=50) ok=true; });
+  return ok;
+}
+function challengeMaster(){
+  if(!canChallengeMaster() || S.daily.master) return;
+  S.daily.master = true;
+  var sect = SECTS[S.sect];
+  var foe = { name:sect.master, lv:40, hpMax:1200, hp:1200, atk:55, def:12, dodge:30, hit:92 };
+  var me = makePlayerUnit(); me.atk = pAtk() + kfTotal()*0.4; me.hpMax = maxHp();
+  var log = [];
+  var guard = 0;
+  while(me.hp>0 && foe.hp>0 && guard<80){
+    guard++;
+    if(!tryDodge(foe)){ var r1=calcDmg(me,foe,1.2); foe.hp-=r1.v; log.push("你一记猛攻，"+sect.master+"气血 -"+r1.v); }
+    else log.push(sect.master+"袖袍一拂，卸开你的攻势");
+    if(foe.hp<=0) break;
+    if(!tryDodge(me)){ var r2=calcDmg(foe,me,1); me.hp-=r2.v; log.push(sect.master+"随手一招，你气血 -"+r2.v); }
+    else log.push("你险险避开");
+  }
+  if(foe.hp<=0){
+    S.fame += 50; gainExp(200);
+    S.pvpLast = { title:"挑战掌门 · 对阵「"+sect.master+"」", result:"胜", log: log.map(function(l){ return {cls:"you",txt:"» "+l}; }).concat([{cls:"sys",txt:"════ 挑战成功 ════　声望 +50 · 经验 +200"}]) };
+    pushNews("[快讯] 「"+S.name+"」挑战"+sect.name+"掌门成功，名动江湖！");
+    toastHint("你战胜了掌门！声望 +50");
+  } else {
+    S.hp = Math.max(1, Math.round(maxHp()*0.4));
+    S.pvpLast = { title:"挑战掌门 · 对阵「"+sect.master+"」", result:"负", log: log.map(function(l){ return {cls:"foe",txt:"» "+l}; }).concat([{cls:"sys",txt:"════ 挑战落败 ════　掌门：「回去再练练」"}]) };
+    pushNews("[快讯] 「"+S.name+"」挑战"+sect.name+"掌门落败，掌门只说了三个字：回去练");
+    toastHint("掌门技高一筹，你落败了（无损失）");
+  }
+  save(); render();
+}
+var betrayArmed = false;
+function betraySect(){
+  if(!S.sect) return;
+  if(!betrayArmed){ betrayArmed = true; toastHint("再点一次确认叛门：声望减半，门派武功尽数遗忘"); setTimeout(function(){ betrayArmed=false; }, 4000); return; }
+  betrayArmed = false;
+  var old = SECTS[S.sect].name;
+  S.sect = null;
+  S.fame = Math.floor(S.fame/2);
+  for(var k in S.skills) if(k.indexOf("_")>0) delete S.skills[k];
+  pushNews("[快讯] 「"+S.name+"」叛出"+old+"，声望减半，门派武功尽数遗忘");
+  save(); render();
+}
+
+/* ---- 07 练功修炼 ---- */
+function htmlTrain(){
+  var learnable = Object.keys(S.skills).filter(function(id){ return S.skills[id].lv>0 || id.indexOf("quan")===0 || BASIC_SKILLS.some(function(b){return b.id===id;}); });
+  var rows = "";
+  Object.keys(S.skills).forEach(function(id){
+    var s = S.skills[id];
+    var isTraining = S.idle && S.idle.kind==="train" && S.idle.key===id;
+    var pct = Math.min(100, Math.round(s.xl/needXl(s.lv)*100));
+    rows += '<tr'+(isTraining?' class="hl"':'')+'><td>'+(isTraining?"▶ ":"")+skillName(id)+'</td><td>'+s.lv+' 级</td>'
+      + '<td><div class="bar" style="max-width:160px;"><i style="width:'+pct+'%"></i></div><span class="dim" style="font-size:12px;margin-left:8px;">'+s.xl+'/'+needXl(s.lv)+'</span></td>'
+      + '<td>'+(isTraining?'<span class="grn" style="font-size:13px;">修炼中</span>':'<button class="btn" style="padding:3px 12px;font-size:13px;" onclick="selTrain(\''+id+'\')">切换</button>')+'</td></tr>';
+  });
+  var idleHtml;
+  if(S.idle && S.idle.kind==="train"){
+    idleHtml = '<div class="hang-bar" style="margin-bottom:14px;"><span class="spin">⚙ 修炼中</span><span>'+skillName(S.idle.key)+'</span>'
+      + '<span>已挂 <span class="grn" id="idleTime">'+mmss(idleElapsed()/1000)+'</span></span>'
+      + '<span>预计修为 <span class="grn" id="idleGain">+'+Math.round(idleElapsed()/60000*13*(1+S.attrs.wx/200))+'</span></span></div>'
+      + '<button class="btn solid" onclick="idleStop()">收功</button>';
+  } else {
+    idleHtml = '<div class="hang-bar" style="margin-bottom:14px;"><span class="faint">未在挂机</span><span class="dim">选择左表武功后开始</span></div>'
+      + '<button class="btn solid" onclick="idleStart(\'train\', trainSel)">开始挂机修炼</button>';
+  }
+  return '<div class="two-col">'
+    + '<div class="col"><div class="panel grow"><div class="ptitle"><b>$</b> 选择要修炼的武功 —— 当前潜能 <span id="trainPot">'+S.pot+'</span></div>'
+    + '<table class="tt"><tr><th>武功</th><th>等级</th><th>修为进度</th><th></th></tr>'+rows+'</table>'
+    + '<div style="display:flex;gap:14px;margin-top:18px;align-items:center;flex-wrap:wrap;">'
+    + '<button class="btn solid" onclick="practiceOnce()">练一拳 · 消耗潜能 10 → 修为 +'+Math.round(50*(1+S.attrs.wx/100))+'</button>'
+    + '<button class="btn" onclick="meditate()">打坐 · 基本内功 · 免费 · 修为 +8</button>'
+    + '</div>'
+    + '<p class="hint-line" style="margin-top:12px;">· 悟性 '+S.attrs.wx+' → 每次练武收益额外 +'+S.attrs.wx+'%（潜能消耗不变）<br>· 潜能不足时无法练武；打坐不消耗潜能，收益较低，适合挂机</p></div></div>'
+    + '<div class="col">'
+    + '<div class="panel" id="idlePanel"><div class="ptitle"><b>$</b> 挂机修炼 —— 单次上限 30 分钟</div>'+idleHtml
+    + '<p class="hint-line" style="margin-top:12px;">· 挂机期间可切换网页、最小化窗口，进度照常累计<br>· 到达 30 分钟自动收功，江湖快讯提醒</p></div>'
+    + '<div class="panel"><div class="ptitle"><b>$</b> 修炼奇遇</div>'
+    + '<div class="log" style="border:none;background:transparent;padding:0;font-size:13.5px;height:auto;">'
+    + '<p class="qy">[奇遇] 高人指点：当前修炼修为 ×2（约 3% 概率）</p>'
+    + '<p class="foe">[风险] 心魔作祟：修炼中断，本次修为减半（约 1% 概率）</p>'
+    + '</div></div>'
+    + '</div></div>'
+    + '<div class="cmdline"><button class="btn dim-btn" style="padding:4px 14px;font-size:13px;" onclick="go(\'hall\')">← 返回大厅（Esc）</button><span style="margin-left:auto;font-size:12px;" class="dim">潜能用完了？出城打怪或做门派任务都能赚潜能</span></div>';
+}
+var trainSel = "quan";
+function selTrain(id){ trainSel = id; toastHint("已选中「"+skillName(id)+"」"); render(); }
+function practiceOnce(){
+  if(S.pot < 10){ toastHint("潜能不足，出城打怪赚潜能"); return; }
+  var gain = Math.round(50*(1+S.attrs.wx/100));
+  if(Math.random()<0.03){ gain*=2; toastHint("[奇遇] 高人指点！本次修为 ×2"); }
+  else if(Math.random()<0.01){ gain=Math.ceil(gain/2); toastHint("[风险] 心魔作祟，本次修为减半"); }
+  S.pot -= 10; addXl(trainSel, gain);
+  save(); render();
+}
+function meditate(){
+  addXl("nei", 8);
+  save(); render();
+}
+
+/* ---- 08 打工赚钱 ---- */
+function htmlWork(){
+  var jobRows = "";
+  JOBS.forEach(function(j){
+    var working = S.idle && S.idle.kind==="work" && S.idle.key===j.id;
+    var met = jobMet(j);
+    jobRows += '<tr'+(working?' class="hl"':'')+'><td>'+j.name+'</td><td class="num">'+j.reqDesc+(met?"":"（未达）")+'</td><td class="amber">'+j.pay+' 文/轮</td><td class="num">'+j.note+'</td>'
+      + '<td>'+(working?'<span class="grn" style="font-size:13px;">打工中</span>':(met?'<button class="btn" style="padding:3px 12px;font-size:13px;" onclick="idleStart(\'work\',\''+j.id+'\')">去做</button>':'<span class="faint" style="font-size:13px;">未达门槛</span>'))+'</td></tr>';
+  });
+  var cur = S.idle && S.idle.kind==="work" ? jobById(S.idle.key) : null;
+  var rightHtml;
+  if(cur){
+    var ms = idleElapsed(), rounds = Math.floor(ms/10000), left = Math.max(0,(S.idle.capMs-ms)/1000);
+    rightHtml = '<div class="panel grow" style="display:flex;flex-direction:column;">'
+      + '<div class="ptitle"><b>$</b> 当前工单 —— '+cur.name+'</div>'
+      + '<div class="hang-bar" style="margin-bottom:14px;" id="workBar">'
+      + '<span class="spin">⚙ 打工中</span><span>'+cur.name.split(" · ")[1]+' · 第 '+(rounds+1)+' 轮</span>'
+      + '<span>已赚 <span class="amber">'+(rounds*cur.pay)+' 文</span></span>'
+      + '<span>剩余 <span class="grn">'+mmss(left)+'</span></span></div>'
+      + '<div style="display:flex;gap:12px;"><button class="btn solid" onclick="idleStop()">收工领钱（'+(rounds*cur.pay)+' 文）</button></div>'
+      + '<div class="log" id="workLogBox" style="border:none;background:transparent;padding:0;margin-top:14px;flex:1;">'+workLogHtml()+'</div></div>';
+  } else {
+    rightHtml = '<div class="panel grow" style="display:flex;align-items:center;justify-content:center;"><p class="faint" style="font-size:15px;line-height:2.4;text-align:center;">暂无工单。<br>10 秒一轮，可挂机；单次上限 30 分钟。<br>镖局待遇最好，但可能遇袭。</p></div>';
+  }
+  return '<div class="two-col wide">'
+    + '<div class="col"><div class="panel grow"><div class="ptitle"><b>$</b> 活计列表 —— 银两的唯一稳定来源</div>'
+    + '<table class="tt"><tr><th>活计</th><th>门槛</th><th>收益</th><th>特点</th><th></th></tr>'+jobRows+'</table>'
+    + '<p class="hint-line" style="margin-top:12px;">· 10 秒一轮，可挂机；挂机单次上限 30 分钟，到点自动收工<br>· 镖局遇袭需战斗（自动演算），膂力 '+S.attrs.tl+'（门槛 20）</p></div></div>'
+    + '<div class="col">'+rightHtml+'</div>'
+    + '</div>'
+    + '<div class="cmdline"><button class="btn dim-btn" style="padding:4px 14px;font-size:13px;" onclick="go(\'hall\')">← 返回大厅（Esc）</button><span style="margin-left:auto;font-size:12px;" class="dim">攒钱买精钢刀（320 文）就去集市看看</span></div>';
+}
+function workLogHtml(){
+  if(!S.workLog.length) return '<p class="faint">» 工单记录会显示在这里</p>';
+  return S.workLog.slice(0,14).map(function(l){ return '<p class="'+(l.cls||"sys")+'">'+esc(l.txt)+'</p>'; }).join("");
+}
+
+/* ---- 09 集市 ---- */
+function htmlMarket(){
+  var buyRows = "";
+  SHOP.forEach(function(g, idx){
+    buyRows += '<tr><td>'+g.name+'</td><td class="num">'+(g.desc||(g.atk?"攻 +"+g.atk:(g.def?"防 +"+g.def:(g.agi?"身法 +"+g.agi:""))))+'</td><td class="num">'+g.seller+'</td><td class="amber">'+fmt(g.price)+' 文</td>'
+      + '<td><button class="btn" style="padding:3px 12px;font-size:13px;" '+(S.silver>=g.price?"":"disabled")+' onclick="buyShop('+idx+')">购买</button></td></tr>';
+  });
+  S.listings.forEach(function(l, idx){
+    buyRows += '<tr class="hl"><td>'+l.name+'（我的摊位）</td><td class="num">'+l.desc+'</td><td class="num">'+esc(S.name)+'</td><td class="amber">'+fmt(l.price)+' 文</td>'
+      + '<td><button class="btn dim-btn" style="padding:3px 12px;font-size:13px;" onclick="delist('+idx+')">下架</button></td></tr>';
+  });
+  S.botStall.forEach(function(l, idx){
+    buyRows += '<tr><td>'+l.name+'</td><td class="num">'+l.desc+'</td><td class="num">'+l.seller+'</td><td class="amber">'+fmt(l.price)+' 文</td>'
+      + '<td><button class="btn" style="padding:3px 12px;font-size:13px;" '+(S.silver>=l.price?"":"disabled")+' onclick="buyStall('+idx+')">购买</button></td></tr>';
+  });
+  var stallRows = "";
+  var bagHtml = "";
+  S.bag.forEach(function(e){
+    bagHtml += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13.5px;">'
+      + '<span style="flex:1;color:#bfe3c9;">['+EQUIP_KIND_NAME[e.kind]+'] '+equipDesc(e)+'</span>'
+      + '<input id="price_'+e.uid+'" placeholder="定价" style="width:80px;background:#0a0f0b;border:1px solid var(--border2);color:var(--green);font-family:inherit;padding:4px 8px;border-radius:4px;outline:none;" value="'+Math.max(10,(e.atk?e.atk*25:(e.def?e.def*20:(e.agi||0)*25+20)))+'">'
+      + '<button class="btn" style="padding:2px 12px;font-size:12px;" onclick="listStall('+e.uid+')">上架</button></div>';
+  });
+  if(!bagHtml) bagHtml = '<p class="hint-line">背包里没有可上架的装备（先去出城打怪捡装备，或换下来的旧装备放这里卖）</p>';
+  stallRows = bagHtml;
+  var tab = S.ui.marketTab;
+  return '<div class="tabs">'
+    + '<button class="tab'+(tab==="buy"?" on":"")+'" onclick="S.ui.marketTab=\'buy\';save();render()">购买</button>'
+    + '<button class="tab'+(tab==="stall"?" on":"")+'" onclick="S.ui.marketTab=\'stall\';save();render()">我的摊位（'+S.listings.length+'）</button>'
+    + '<span style="margin-left:auto;font-size:13px;color:var(--dim);align-self:center;">成交收 5% 手续费 · 秘籍类物品拾获绑定、不可交易</span></div>'
+    + (tab==="buy"
+      ? '<div class="panel grow"><div class="ptitle"><b>$</b> market list —— 在售物品（当前银两 <span id="marketSilver">'+fmt(S.silver)+'</span> 文）</div>'
+        + '<table class="tt"><tr><th>物品</th><th>属性</th><th>卖家</th><th>价格</th><th></th></tr>'+buyRows+'</table>'
+        + '<p class="hint-line" style="margin-top:12px;">· 上架物品自定价，售出后银两入账（扣 5% 手续费）<br>· 想快速出手？在「江湖频道」吆喝一声：世界频道发言需等级 ≥ 3</p></div>'
+      : '<div class="panel grow"><div class="ptitle"><b>$</b> market sell —— 上架背包物品（其他大侠会来买走）</div>'+stallRows
+        + (S.listings.length?'<div style="border-top:1px dashed var(--border);padding-top:12px;margin-top:10px;"><div class="ptitle" style="margin:0 0 8px;"><b>$</b> 在售中</div>'
+          + S.listings.map(function(l,i){ return '<p style="font-size:13.5px;color:#bfe3c9;margin:4px 0;">'+l.name+' · '+l.desc+' · 挂价 '+fmt(l.price)+' 文</p>'; }).join("")+'</div>':'')
+        + '</div>')
+    + '<div class="cmdline"><button class="btn dim-btn" style="padding:4px 14px;font-size:13px;" onclick="go(\'hall\')">← 返回大厅（Esc）</button><span style="margin-left:auto;font-size:12px;" class="dim">银两不够？先去打工，或把旧装备半价卖给杂货铺（属性页）</span></div>';
+}
+function buyShop(idx){
+  var g = SHOP[idx];
+  if(S.silver < g.price) return;
+  S.silver -= g.price;
+  if(g.kind==="item"){ S.items[g.item] = (S.items[g.item]||0)+1; }
+  else{ S.uidSeq++; S.bag.push({uid:S.uidSeq,name:g.name,kind:g.kind,atk:g.atk,def:g.def,agi:g.agi}); }
+  toastHint("购得「"+g.name+"」");
+  save(); render();
+}
+function buyStall(idx){
+  var g = S.botStall[idx];
+  if(!g || S.silver < g.price) return;
+  S.silver -= g.price;
+  S.botStall.splice(idx,1);
+  S.uidSeq++; S.bag.push({uid:S.uidSeq,name:g.name,kind:g.kind,atk:g.atk,def:g.def,agi:g.agi});
+  toastHint("从「"+g.seller+"」摊上购得「"+g.name+"」");
+  save(); render();
+}
+function listStall(uid){
+  var price = parseInt(el("price_"+uid).value,10);
+  if(!price || price<10){ toastHint("定价至少 10 文"); return; }
+  for(var i=0;i<S.bag.length;i++){
+    if(S.bag[i].uid===uid){
+      var e = S.bag[i];
+      var desc = e.atk?"攻 +"+e.atk:(e.def?"防 +"+e.def:(e.agi?"身法 +"+e.agi:""));
+      S.listings.push({uid:e.uid,name:e.name,kind:e.kind,atk:e.atk,def:e.def,agi:e.agi,desc:desc,price:price});
+      S.bag.splice(i,1);
+      toastHint("「"+e.name+"」已上架，挂价 "+price+" 文");
+      break;
+    }
+  }
+  save(); render();
+}
+function delist(idx){
+  var l = S.listings[idx]; if(!l) return;
+  S.uidSeq++;
+  S.bag.push({uid:S.uidSeq,name:l.name,kind:l.kind,atk:l.atk,def:l.def,agi:l.agi});
+  S.listings.splice(idx,1);
+  save(); render();
+}
+function refreshBotStall(){
+  while(S.botStall.length > 5) S.botStall.shift();
+  if(S.botStall.length < 4 && Math.random()<0.5){
+    var b = pick(BOTS);
+    var g = pick(SHOP.filter(function(x){ return x.kind!=="item"; }));
+    var price = Math.round(g.price * rnd(0.85,1.25));
+    S.botStall.push({name:g.name,kind:g.kind,atk:g.atk,def:g.def,agi:g.agi,desc:(g.atk?"攻 +"+g.atk:(g.def?"防 +"+g.def:"身法 +"+(g.agi||0))),seller:b.n,price:price});
+  }
+}
+function tryBotBuy(){
+  for(var i=S.listings.length-1;i>=0;i--){
+    var l = S.listings[i];
+    var fair = l.atk?l.atk*25:(l.def?l.def*20:((l.agi||0)*25+20));
+    if(l.price <= fair*1.3 && Math.random()<0.3){
+      var gain = Math.round(l.price*0.95);
+      S.silver += gain;
+      S.listings.splice(i,1);
+      var buyer = pick(BOTS).n;
+      pushNews("[快讯] 你的摊位「"+l.name+"」被「"+buyer+"」买走，入账 "+gain+" 文（含 5% 手续费）");
+    }
+  }
+}
+
+/* ---- 10 野外战斗 ---- */
+function htmlBattle(){
+  var b = S.battle;
+  if(!b || b.over===undefined){ /* zone select */ }
+  if(b && !b.over){
+    var sectBtns = "";
+    Object.keys(S.skills).forEach(function(id){
+      if(id.indexOf("_")>0 && S.skills[id].lv>0){
+        var s = S.skills[id], cost = Math.round(8 + s.lv/5);
+        sectBtns += '<button class="btn" '+(S.mp>=cost?"":"disabled")+' onclick="playerAttack(\'skill\',\''+id+'\')">武功 · '+skillName(id)+'（耗内力 '+cost+'）</button>';
+      }
+    });
+    return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:14px;">'
+      + '<div class="panel"><div class="ptitle"><b>敌</b> '+esc(b.foe.name)+' · Lv.'+b.foe.lv+'</div>'
+      + '<div style="display:flex;align-items:center;gap:12px;"><span style="font-size:13px;color:var(--dim);width:44px;">气血</span><div class="bar" style="height:14px;"><i class="redbar" style="width:'+Math.max(2,Math.round(b.foe.hp/b.foe.hpMax*100))+'%"></i></div><span class="red" style="font-size:13px;">'+b.foe.hp+'/'+b.foe.hpMax+'</span></div></div>'
+      + '<div class="panel"><div class="ptitle"><b>我</b> '+esc(S.name)+' · Lv.'+S.level+' · '+sectName()+'</div>'
+      + '<div id="battleBars">'
+      + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;"><span style="font-size:13px;color:var(--dim);width:44px;">气血</span><div class="bar" style="height:14px;"><i style="width:'+Math.max(2,Math.round(S.hp/maxHp()*100))+'%"></i></div><span style="font-size:13px;">'+S.hp+'/'+maxHp()+'</span></div>'
+      + '<div style="display:flex;align-items:center;gap:12px;"><span style="font-size:13px;color:var(--dim);width:44px;">内力</span><div class="bar" style="height:14px;"><i class="cyanbar" style="width:'+Math.max(2,Math.round(S.mp/maxMp()*100))+'%"></i></div><span style="font-size:13px;">'+S.mp+'/'+maxMp()+'</span></div>'
+      + '</div></div></div>'
+      + '<div class="log grow" id="battleLogBox">'+battleLogHtml()+'</div>'
+      + '<div style="display:flex;gap:12px;margin-top:14px;flex-wrap:wrap;" id="battleActs">'
+      + '<button class="btn solid" onclick="playerAttack(\'basic\')">攻击</button>'
+      + sectBtns
+      + '<button class="btn" onclick="bDodge()">轻功 · 闪避</button>'
+      + '<button class="btn" '+(S.items.jinchuang>0?"":"disabled")+' onclick="usePotion()">使用 · 金创药×'+(S.items.jinchuang||0)+'</button>'
+      + '<button class="btn dim-btn" onclick="fleeBattle()">逃跑</button>'
+      + '<button class="btn" style="margin-left:auto;" onclick="autoBattle()">⚙ 自动演算到底（摸鱼友好）</button>'
+      + '</div>'
+      + '<div class="cmdline"><button class="btn dim-btn" style="padding:4px 14px;font-size:13px;" onclick="go(\'hall\')">← 返回大厅（Esc）</button><span style="margin-left:auto;font-size:12px;" class="dim">战败不需读档：昏迷回城，气血上限无损，装备不掉</span></div>';
+  }
+  if(b && b.over){
+    return '<div class="log grow" id="battleLogBox">'+battleLogHtml()+'</div>'
+      + '<div style="display:flex;gap:12px;margin-top:14px;flex-wrap:wrap;">'
+      + '<button class="btn solid" onclick="S.battle=null;save();render()">再战一只</button>'
+      + '<button class="btn dim-btn" onclick="S.battle=null;go(\'hall\')">返回大厅</button>'
+      + '</div>'
+      + '<div class="cmdline"><span class="dim" style="font-size:12px;">「再战一只」会在同一区域随机遭遇新敌人</span></div>';
+  }
+  // 选区域
+  var rows = "";
+  ZONES.forEach(function(z){
+    var met = S.level >= z.req;
+    var foes = z.foes.map(function(f){ return f.name+" Lv."+f.lv; }).join("、");
+    rows += '<tr'+(met?"":"")+'><td>'+z.name+'</td><td class="num">'+foes+'</td><td>'+(met?'<button class="btn" style="padding:3px 12px;font-size:13px;" onclick="enterZone(\''+z.id+'\')">遭遇战</button>':'<span class="faint" style="font-size:13px;">需 Lv.'+z.req+'</span>')+'</td></tr>';
+  });
+  return '<div class="panel grow"><div class="ptitle"><b>$</b> jianghu hunt —— 选择历练之地（气血 '+S.hp+'/'+maxHp()+'）</div>'
+    + '<table class="tt"><tr><th>区域</th><th>常见敌人</th><th></th></tr>'+rows+'</table>'
+    + '<p class="hint-line" style="margin-top:12px;">· 敌人按区域随机遭遇，战胜获得潜能 / 银两 / 经验 / 声望<br>· 战斗可手动回合，也可「自动演算到底」，摸鱼期间首选</p></div>'
+    + '<div class="cmdline"><button class="btn dim-btn" style="padding:4px 14px;font-size:13px;" onclick="go(\'hall\')">← 返回大厅（Esc）</button><span style="margin-left:auto;font-size:12px;" class="dim">打不过就跑，跑不过就练，练完再来</span></div>';
+}
+function battleLogHtml(){
+  var b = S.battle; if(!b) return "";
+  return b.log.map(function(l){ return '<p class="'+l.cls+'">'+l.txt+'</p>'; }).join("");
+}
+function enterZone(id){
+  for(var i=0;i<ZONES.length;i++){
+    if(ZONES[i].id===id){
+      var z = ZONES[i];
+      if(S.level < z.req) return;
+      var def = pick(z.foes);
+      var foe = makeFoe(def);
+      foe.hpMax = foe.hp = Math.round(def.hp * rnd(0.9,1.1));
+      S.battle = { foe:foe, log:[], turn:1, over:false, dodgeBuff:0, zoneName:z.name, fameGain: def.lv >= S.level-2 };
+      blog("sys", "» 你步入"+z.name+"，迎面撞上一只「"+foe.name+"」（Lv."+foe.lv+"）！");
+      save(); render();
+      return;
+    }
+  }
+}
+function bDodge(){
+  var b = S.battle; if(!b || b.over) return;
+  b.dodgeBuff = 1;
+  blog("you", "> 你提气轻功，身形飘忽，闪避大幅提升。");
+  foeTurn(); syncBattle();
+}
+function usePotion(){
+  var b = S.battle; if(!b || b.over) return;
+  if((S.items.jinchuang||0)<=0) return;
+  S.items.jinchuang--;
+  S.hp = Math.min(maxHp(), S.hp+50);
+  blog("you", "> 你服下一枚金创药，气血 +50。");
+  foeTurn(); syncBattle();
+}
+function syncBattle(){
+  if(S.hp<=0 && S.battle && !S.battle.over) battleLose();
+  save();
+  if(SCR!=="battle"){ return; }
+  render();
+  var box = el("battleLogBox"); if(box) box.scrollTop = box.scrollHeight;
+}
+
+/* ---- 11 擂台切磋 ---- */
+function myKfRank(){
+  var list = BOTS.map(function(b){ return botKf(b); });
+  var mine = kfTotal();
+  var rank = 1;
+  for(var i=0;i<list.length;i++) if(list[i] > mine) rank++;
+  return rank;
+}
+function htmlPvp(){
+  var botOnline = {};
+  BOTS.forEach(function(b){ botOnline[b.n] = Math.random() < 0.6; });
+  var rows = "";
+  var sorted = BOTS.slice().sort(function(a,b){ return botKf(b)-botKf(a); });
+  sorted.forEach(function(b){
+    var online = botOnline[b.n];
+    rows += '<tr><td>'+esc(b.n)+'</td><td class="num">'+(b.s?SECTS[b.s].name:"散人")+'</td><td>Lv.'+b.lv+'</td><td>'+botKf(b)+'</td>'
+      + '<td>'+(online?'<span class="grn">在线</span>':'<span class="dim">离线</span>')+'</td>'
+      + '<td>'+(online?'<button class="btn" style="padding:3px 12px;font-size:13px;" onclick="doDuel(\''+esc(b.n)+'\')">切磋</button>':'<button class="btn dim-btn" style="padding:3px 12px;font-size:13px;" onclick="leaveMsg(\''+esc(b.n)+'\')">留言邀战</button>')+'</td></tr>';
+  });
+  var last = "";
+  if(S.pvpLast){
+    last = '<div class="panel grow" style="display:flex;flex-direction:column;"><div class="ptitle"><b>$</b> 最近一战 · '+esc(S.pvpLast.title)+'</div>'
+      + '<div class="log" style="border:none;background:transparent;padding:0;flex:1;">'
+      + S.pvpLast.log.map(function(l){ return '<p class="'+l.cls+'">'+l.txt+'</p>'; }).join("")
+      + '</div></div>';
+  } else {
+    last = '<div class="panel grow" style="display:flex;align-items:center;justify-content:center;"><p class="faint" style="text-align:center;font-size:14px;line-height:2.2;">还没有切磋记录<br>挑一位大侠过招吧</p></div>';
+  }
+  return '<div class="stat-strip" style="margin-bottom:14px;">'
+    + '<span>今日切磋剩余 <b id="duelLeft">'+(10-S.daily.duels)+' / 10</b></span>'
+    + '<span class="dim">切磋不掉装备 · 不损气血上限 · 胜者声望 +2</span>'
+    + '<span style="margin-left:auto;">我的排名：武功总等级榜 第 <b id="myKfRank">'+myKfRank()+'</b> 名</span></div>'
+    + '<div class="two-col">'
+    + '<div class="col"><div class="panel grow"><div class="ptitle"><b>$</b> pvp challenge —— 挑一位大侠过招（挑战后自动演算，无需对方在线）</div>'
+    + '<table class="tt"><tr><th>大侠</th><th>门派</th><th>等级</th><th>武功总等级</th><th>状态</th><th></th></tr>'+rows+'</table></div></div>'
+    + '<div class="col">'+last+'</div></div>'
+    + '<div class="cmdline"><button class="btn dim-btn" style="padding:4px 14px;font-size:13px;" onclick="go(\'hall\')">← 返回大厅（Esc）</button><span style="margin-left:auto;font-size:12px;" class="dim">胜负由双方当前属性、武功与装备自动演算，看脸也看练度</span></div>';
+}
+function doDuel(botName){
+  if(S.daily.duels >= 10){ toastHint("今日切磋次数已用完，明日再战"); return; }
+  S.daily.duels++;
+  var r = duelBot(botName);
+  if(r){
+    S.pvpLast = { title:"切磋 · 对阵「"+botName+"」", result:r.win?"胜":"负", log:r.log };
+    if(r.win){
+      S.fame += 2; gainExp(20 + Math.round(botKf(r.bot)/2));
+      pushWorld("[世界] 快讯：「"+S.name+"」在擂台击败「"+botName+"」，升至声望 "+S.fame+"（"+fameTitle(S.fame)+"）");
+    } else {
+      gainExp(10);
+    }
+  }
+  save(); render();
+}
+var pendingDuels = [];
+function leaveMsg(botName){
+  if(S.daily.duels >= 10){ toastHint("今日切磋次数已用完"); return; }
+  S.daily.duels++;
+  pushNews("[快讯] 你向「"+botName+"」发出了邀战留言（对方上线后将自动应战）");
+  pendingDuels.push({ bot:botName, at:Date.now() + ri(60,180)*1000 });
+  save(); render();
+}
+function checkPendingDuels(){
+  for(var i=pendingDuels.length-1;i>=0;i--){
+    if(Date.now() >= pendingDuels[i].at){
+      var botName = pendingDuels[i].bot;
+      pendingDuels.splice(i,1);
+      var r = duelBot(botName);
+      if(r){
+        S.pvpLast = { title:"应战 · 「"+botName+"」应邀而来", result:r.win?"胜":"负", log:r.log };
+        if(r.win){ S.fame += 2; gainExp(20 + Math.round(botKf(r.bot)/2)); pushNews("[快讯] 「"+botName+"」应邀而来，被你击败！声望 +2"); }
+        else { gainExp(10); pushNews("[快讯] 「"+botName+"」应邀而来，你落败了。对方留话：年轻人，练练再来"); }
+        if(SCR==="pvp") render();
+      }
+    }
+  }
+}
+
+/* ---- 12 江湖频道 ---- */
+function htmlChat(){
+  var tab = S.ui.chatTab;
+  var logHtml = "", titleTxt = "";
+  if(tab==="world"){
+    titleTxt = "channel --world —— 当前在线 "+S.online+" 人";
+    logHtml = S.worldLog.map(function(l){
+      if(l.cls==="news") return '<p class="sys">'+esc(l.txt)+'</p>';
+      if(l.me) return '<p><span class="grn">'+esc(l.txt)+'</span></p>';
+      return '<p><span class="cyan">'+esc(l.txt)+'</span></p>';
+    }).join("") || '<p class="faint">频道很安静……</p>';
+  } else if(tab==="sect"){
+    titleTxt = "channel --sect —— "+sectName()+"门派频道";
+    if(!S.sect){
+      logHtml = '<p class="faint">你尚未拜师，听不到门派频道的动静。</p>';
+    } else {
+      logHtml = S.sectLog.map(function(l){
+        if(l.me) return '<p><span class="grn">'+esc(l.txt)+'</span></p>';
+        return '<p>'+esc(l.txt)+'</p>';
+      }).join("") || '<p class="faint">同门都很安静……</p>';
+    }
+  } else {
+    titleTxt = "channel --news —— 江湖快讯";
+    logHtml = S.news.map(function(n){
+      var cls = n.indexOf("[奇遇]")>=0 ? "qy" : (n.indexOf("[系统]")>=0 ? "" : "sys");
+      return '<p class="'+cls+'">'+esc(n)+'</p>';
+    }).join("");
+  }
+  var canSpeak = (tab==="world" && S.level>=3) || (tab==="sect" && S.sect);
+  return '<div class="tabs">'
+    + '<button class="tab'+(tab==="world"?" on":"")+'" onclick="S.ui.chatTab=\'world\';save();render()">世界</button>'
+    + '<button class="tab'+(tab==="sect"?" on":"")+'" onclick="S.ui.chatTab=\'sect\';save();render()">门派 · '+sectName()+'</button>'
+    + '<button class="tab'+(tab==="news"?" on":"")+'" onclick="S.ui.chatTab=\'news\';save();render()">快讯</button>'
+    + '<span style="margin-left:auto;font-size:13px;color:var(--dim);align-self:center;">世界频道发言需等级 ≥ 3 · <span class="kbd">Enter</span> 发送</span></div>'
+    + '<div class="panel grow" style="display:flex;flex-direction:column;min-height:0;">'
+    + '<div class="ptitle"><b>$</b> '+titleTxt+'</div>'
+    + '<div class="log" id="chatLogBox" style="flex:1;">'+logHtml+'</div>'
+    + '<div style="display:flex;gap:12px;margin-top:12px;align-items:center;">'
+    + '<input id="chatInput" style="flex:1;background:#0a0f0b;border:1px solid var(--border2);color:var(--green);font-family:inherit;font-size:14px;padding:9px 14px;border-radius:4px;outline:none;" placeholder="'+(canSpeak?"输入江湖见闻…":"当前频道不可发言")+'" '+(canSpeak?"":"disabled")+' onkeydown="if(event.key===\'Enter\'){sendChat()}">'
+    + '<button class="btn solid" '+(canSpeak?"":"disabled")+' onclick="sendChat()">发送</button>'
+    + '</div></div>'
+    + '<div class="cmdline"><button class="btn dim-btn" style="padding:4px 14px;font-size:13px;" onclick="go(\'hall\')">← 返回大厅（Esc）</button><span style="margin-left:auto;font-size:12px;" class="dim">纯文字频道，无图片无表情，保持终端伪装</span></div>';
+}
+function sendChat(){
+  var inp = el("chatInput"); if(!inp) return;
+  var v = inp.value.trim(); if(!v) return;
+  if(S.ui.chatTab==="world"){
+    if(S.level<3){ toastHint("世界频道需 Lv.3"); return; }
+    pushWorld("[世界] "+S.name+"（你）："+v);
+    S.worldLog[S.worldLog.length-1].me = true;
+    if(Math.random()<0.4) setTimeout(botReply, ri(3000,9000));
+  } else if(S.ui.chatTab==="sect" && S.sect){
+    pushSect("[门派] "+S.name+"（你）："+v);
+    S.sectLog[S.sectLog.length-1].me = true;
+    if(Math.random()<0.4) setTimeout(botSectReply, ri(3000,9000));
+  }
+  inp.value = "";
+  save(); render();
+}
+function botReply(){
+  if(!S) return;
+  var b = pick(BOTS);
+  pushWorld("[世界] "+b.n+"："+pick(CHAT_WORLD));
+  if(SCR==="chat" && S.ui.chatTab==="world") render();
+}
+function botSectReply(){
+  if(!S || !S.sect) return;
+  var same = BOTS.filter(function(b){ return b.s===S.sect; });
+  var b = same.length ? pick(same) : pick(BOTS);
+  pushSect("[门派] "+b.n+"："+pick(CHAT_SECT));
+  if(SCR==="chat" && S.ui.chatTab==="sect") render();
+}
+
+/* ---- 13 排行榜 ---- */
+function htmlRank(){
+  var tab = S.ui.rankTab;
+  var main = "";
+  if(tab==="kf"){
+    var list = BOTS.map(function(b){ return {n:b.n, s:b.s?SECTS[b.s].name:"散人", v:botKf(b), me:false}; });
+    list.push({n:S.name+"（你）", s:sectName(), v:kfTotal(), me:true});
+    list.sort(function(a,b){ return b.v-a.v; });
+    main = rankTable("rank --kungfu —— 武功总等级榜", list, "总等级", function(i,r){ return (r.me?' class="hl"':'')+'<td class="'+(i<3?'amber':(r.me?'grn':'num'))+'">'+(i+1)+'</td><td>'+esc(r.n)+'</td><td class="num">'+r.s+'</td><td>'+r.v+'</td>'; }, ["排名","大侠","门派","总等级"]);
+  } else if(tab==="wealth"){
+    var list2 = BOTS.map(function(b){ return {n:b.n, s:b.s?SECTS[b.s].name:"散人", v:botWealth(b), me:false}; });
+    list2.push({n:S.name+"（你）", s:sectName(), v:wealth(), me:true});
+    list2.sort(function(a,b){ return b.v-a.v; });
+    main = rankTable("rank --wealth —— 财富榜", list2, "银两", function(i,r){ return (r.me?' class="hl"':'')+'<td class="'+(i<3?'amber':(r.me?'grn':'num'))+'">'+(i+1)+'</td><td>'+esc(r.n)+'</td><td class="amber">'+fmt(r.v)+' 文</td>'; }, ["#","大侠","银两"]);
+  } else {
+    var list3 = BOTS.map(function(b){ return {n:b.n, s:b.s?SECTS[b.s].name:"散人", v:botFame(b), me:false}; });
+    list3.push({n:S.name+"（你）", s:sectName(), v:S.fame, me:true});
+    list3.sort(function(a,b){ return b.v-a.v; });
+    main = rankTable("rank --fame —— 声望榜", list3, "声望", function(i,r){ return (r.me?' class="hl"':'')+'<td class="'+(i<3?'amber':(r.me?'grn':'num'))+'">'+(i+1)+'</td><td>'+esc(r.n)+'</td><td>'+r.v+'</td>'; }, ["#","大侠","声望"])
+      + '<p class="hint-line" style="margin-top:10px;">声望来源：切磋获胜 +2 · 野怪胜利 +1 · 挑战掌门 +50 · 江湖奇遇不等<br>称号：无名小卒(0) → 初入江湖(50) → 小有名气(200) → …</p>';
+  }
+  return '<div class="tabs">'
+    + '<button class="tab'+(tab==="kf"?" on":"")+'" onclick="S.ui.rankTab=\'kf\';save();render()">武功总等级</button>'
+    + '<button class="tab'+(tab==="wealth"?" on":"")+'" onclick="S.ui.rankTab=\'wealth\';save();render()">财富</button>'
+    + '<button class="tab'+(tab==="fame"?" on":"")+'" onclick="S.ui.rankTab=\'fame\';save();render()">声望</button>'
+    + '<span style="margin-left:auto;font-size:13px;color:var(--dim);align-self:center;">每小时整点更新</span></div>'
+    + '<div class="panel grow">'+main+'</div>'
+    + '<div class="cmdline"><button class="btn dim-btn" style="padding:4px 14px;font-size:13px;" onclick="go(\'hall\')">← 返回大厅（Esc）</button><span style="margin-left:auto;font-size:12px;" class="dim">登上榜首那天，全服江湖快讯将播报你的名号</span></div>';
+}
+function rankTable(title, list, vname, rowFn, heads){
+  var rows = list.slice(0,12).map(function(r,i){ return "<tr>"+rowFn(i,r)+"</tr>"; }).join("");
+  var meIdx = -1;
+  for(var i=0;i<list.length;i++) if(list[i].me) meIdx = i;
+  var meRow = "";
+  if(meIdx >= 12) meRow = "<tr>"+rowFn(meIdx,list[meIdx])+"</tr>";
+  return '<div class="ptitle"><b>$</b> '+title+'</div>'
+    + '<table class="tt"><tr>'+heads.map(function(h){ return "<th>"+h+"</th>"; }).join("")+'</tr>'+rows+meRow+'</table>';
+}
+
+/* ============ 老板键 ============ */
+function toggleBoss(){
+  bossOn = !bossOn;
+  el("bossOverlay").style.display = bossOn ? "flex" : "none";
+  document.title = bossOn ? "项目进度跟踪表_2026Q4_final_v3.xlsx - Excel" : "bash — 132×41";
+  if(bossOn){
+    var d = new Date();
+    el("bossDate").textContent = "更新于 "+pad2(d.getMonth()+1)+"-"+pad2(d.getDate())+" "+pad2(d.getHours())+":"+pad2(d.getMinutes())+" · 责任人：张伟";
+  }
+}
+
+/* ============ 世界心跳 ============ */
+var chatTimer = 0, newsTimer = 0, onlineTimer = 0, stallTimer = 0, buyTimer = 0;
+function worldTick(){
+  if(!S) return;
+  chatTimer--; newsTimer--; onlineTimer--; stallTimer--; buyTimer--;
+  if(chatTimer<=0){ chatTimer = ri(12,32); if(Math.random()<0.7){ var b=pick(BOTS); pushWorld("[世界] "+b.n+"："+pick(CHAT_WORLD)); } else if(S.sect && Math.random()<0.5){ var sb=pick(BOTS.filter(function(x){return x.s===S.sect;}))||pick(BOTS); pushSect("[门派] "+sb.n+"："+pick(CHAT_SECT)); } }
+  if(newsTimer<=0){ newsTimer = ri(50,110); genNews(); }
+  if(onlineTimer<=0){ onlineTimer = 10; var h=new Date().getHours(); var base = 180 + 180*Math.sin((h-4)/24*Math.PI*2); S.online = Math.max(60, Math.round(base + rnd(-25,25))); }
+  if(stallTimer<=0){ stallTimer = ri(120,260); refreshBotStall(); if(SCR==="market" && S.ui.marketTab==="buy") render(); }
+  if(buyTimer<=0){ buyTimer = ri(40,90); var before = S.silver; tryBotBuy(); if(S.silver!==before && SCR==="market") render(); if(S.silver!==before && SCR==="hall") { /* 快讯已提示 */ } }
+  checkPendingDuels();
+}
+
+/* ============ 主循环 ============ */
+setInterval(function(){
+  var now = Date.now();
+  var dt = Math.min((now-lastTick)/1000, 300);
+  lastTick = now;
+  el("tbarClock").textContent = pad2(new Date().getHours())+":"+pad2(new Date().getMinutes())+":"+pad2(new Date().getSeconds());
+  if(!S){ return; }
+  worldTick();
+  checkDaily();
+  // 自动收功
+  if(S.idle && Date.now()-S.idle.startTs >= S.idle.capMs){ settleIdle(true); S.idle=null; }
+  // 回血回蓝（每 6 秒 1 气 / 15 秒 1 内，按 dt 折算）
+  if(!S.battle){
+    S.hp = Math.min(maxHp(), S.hp + dt/6);
+    S.mp = Math.min(maxMp(), S.mp + dt/15);
+    if(S.hp % 1 === 0){} // 无操作
+  }
+  S.hp = Math.floor(S.hp); S.mp = Math.floor(S.mp);
+  // 轻量刷新当前屏的动态区域
+  lightRefresh();
+  // 每分钟落一次盘（另有事件驱动保存）
+  if(now % 60000 < 1100) save();
+}, 1000);
+
+function lightRefresh(){
+  if(bossOn) return;
+  if(SCR==="hall"){
+    var strip = el("statStrip");
+    if(strip){
+      var keep = el("cmdInput"); var kv = keep ? keep.value : null;
+      var newsBox = el("newsBox");
+      if(newsBox) newsBox.innerHTML = S.news.slice(0,12).map(function(n){
+        var cls = n.indexOf("[奇遇]")>=0 ? "qy" : (n.indexOf("[系统]")>=0 ? "" : "sys");
+        return '<p class="'+cls+'">'+esc(n)+'</p>';
+      }).join("");
+      var ot = el("onlineTxt"); if(ot) ot.textContent = S.online;
+      var ct = el("cityTxt"); if(ct) ct.textContent = Math.max(3,Math.round(S.online/7));
+      var hb = el("hangBarBox");
+      if(hb) hb.innerHTML = hangBarHtml();
+      else if(S.idle){ render(); return; }
+      if(kv!==null && el("cmdInput")) el("cmdInput").value = kv;
+    }
+  } else if(SCR==="train"){
+    var t = el("idleTime"); if(t) t.textContent = mmss(idleElapsedSafe()/1000);
+    var g = el("idleGain"); if(g) g.textContent = "+"+Math.round(idleElapsedSafe()/60000*13*(1+S.attrs.wx/200));
+    var p = el("trainPot"); if(p) p.textContent = S.pot;
+  } else if(SCR==="work"){
+    if(S.idle && S.idle.kind==="work"){ render(); }
+  }
+}
+function idleElapsedSafe(){ return S.idle ? Math.min(Date.now()-S.idle.startTs, S.idle.capMs) : 0; }
+
+/* ============ 键盘 ============ */
+document.addEventListener("keydown", function(e){
+  if(e.key === "`" || e.key === "~"){
+    e.preventDefault();
+    toggleBoss();
+    return;
+  }
+  if(e.target && (e.target.tagName==="INPUT" || e.target.tagName==="TEXTAREA")) return;
+  if(e.key === "Escape"){
+    if(bossOn){ toggleBoss(); return; }
+    if(S && SCR!=="hall" && SCR!=="login" && SCR!=="create") go("hall");
+    return;
+  }
+  if(S && SCR==="hall" && !bossOn){
+    var map = { "1":"stats","2":"master","3":"train","4":"work","5":"market","6":"battle","7":"pvp","8":"chat","9":"rank" };
+    if(map[e.key]) go(map[e.key]);
+  }
+});
+
+/* ============ 启动 ============ */
+(function boot(){
+  var cur = null;
+  try{ cur = localStorage.getItem("moyu_cur"); }catch(e){}
+  if(cur){
+    var acct = loadAccount(cur);
+    if(acct){ S = acct; checkDaily(); if(S.idle){ settleIdle(true); S.idle=null; } S.hp=Math.min(S.hp||maxHp(),maxHp()); S.mp=Math.min(S.mp||maxMp(),maxMp()); SCR = (S.screen && S.screen!=="login" && S.screen!=="create") ? S.screen : "hall"; pushNews("[系统] 大侠「"+S.name+"」回到江湖"); }
+  }
+  if(S){ refreshBotStall(); refreshBotStall(); }
+  render();
+})();
+</script>
+</body>
+</html>

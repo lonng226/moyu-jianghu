@@ -1,0 +1,11 @@
+# OS junk
+Thumbs.db
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Local test artifacts
+__check.js
+*.png
